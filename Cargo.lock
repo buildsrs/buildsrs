@@ -293,6 +293,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "buildsrs-frontend"
+version = "0.1.0"
+dependencies = [
+ "yew",
+]
+
+[[package]]
 name = "buildsrs-registry-sync"
 version = "0.1.0"
 dependencies = [
@@ -704,13 +711,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a62bc1cf6f830c2ec14a513a9fb124d0a213a629668a4186f329db21fe045652"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "frontend"
-version = "0.1.0"
-dependencies = [
- "yew",
 ]
 
 [[package]]
