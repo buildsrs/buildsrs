@@ -35,7 +35,7 @@ graph BT
   finished. We expect less than 5 transactions per second.
 - The registry sync component continuously monitors the [crates.io
   index](https://github.com/rust-lang/crates.io-index) and communicates changes
-to the backend via a simple HTTP REST API.
+  to the database.
   This is an external service because it only needs to run once.
 - The builder is a component that fetches jobs from the backend, builds them
   using Docker, and pushes the resulting binaries back into the backend. This
