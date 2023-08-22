@@ -22,7 +22,7 @@ pages:
   before_script:
     - apk add brotli
   script:
-    - export FILES=$(ls frontend/dist/*)
+    - export FILES=$(find frontend/dist -type f)
     - gzip -k $FILES
     - brotli -k $FILES
     - mv frontend/dist public
