@@ -12,18 +12,19 @@ open source to encourage contribution.
 ```mermaid
 graph BT
     Storage[fa:fa-database Wasabi S3\nbuilds-production]
-    subgraph Deployment
-        Database[fa:fa-database Postgres Database]
-        Backend[fa:fa-server crates.rs Backend]
-        Backend  -->|SQL| Database
-        Fetcher[fa:fa-download Fetcher] -->|HTTP| Backend
-        Proxy[fa:fa-globe Cloudflare CDN\napi.builds.rs] -->|HTTP| Backend
-        Runner[fa:fa-vial Runner] -->|WebSocket| Backend
-    end
-    Backend  -->|HTTP| Storage 
     Frontend[fa:fa-globe Frontend\nbuilds.rs]
-    Frontend -->|HTTP| Proxy
-    Frontend -->|HTTP| Storage
+    Frontend -->|HTTPS| Storage
+    Frontend -->|HTTPS| Proxy
+    subgraph Deployment
+        direction BT
+        Database[fa:fa-database Postgres Database]
+        Backend[fa:fa-server builds.rs Backend]
+        Backend  -->|SQL| Database
+        Sync[fa:fa-download Registry Sync] -->|SQL| Database
+        Proxy[fa:fa-globe Cloudflare CDN\napi.builds.rs] -->|HTTPS| Backend
+        Builder[fa:fa-vial Builder] -->|WebSocket| Backend
+    end
+    Backend  -->|HTTP| Storage
 ```
 
 - It is mostly monolithic and has one central backend component. This component
@@ -32,7 +33,9 @@ graph BT
 - Uses a Postgres database to store metadata. This is relatively low-traffic,
   as it is only written to when crates are published or builds are started or
   finished. We expect less than 5 transactions per second.
-- The crates fetcher continuously monitors the [crates.io index](https://github.com/rust-lang/crates.io-index) and communicates changes to the backend via a simple HTTP REST API.
+- The registry sync component continuously monitors the [crates.io
+  index](https://github.com/rust-lang/crates.io-index) and communicates changes
+to the backend via a simple HTTP REST API.
   This is an external service because it only needs to run once.
 - The builder is a component that fetches jobs from the backend, builds them
   using Docker, and pushes the resulting binaries back into the backend. This
@@ -40,6 +43,23 @@ graph BT
 - Storage is being handled by a public Wasabi bucket.
 - We are considering adding search to this using Meilisearch or Qdrant.
 
-## LICENSE
+## Development
+
+Prerequisites:
+
+- [rustup](https://rustup.rs/)
+- [just](https://github.com/casey/just)
+- [trunk](https://trunkrs.dev/)
+- [docker](https://docs.docker.com/engine/install/)
+
+Tests:
+
+    just database
+    just migrate
+    just test
+
+For more information, check the `README.md` files in the respective subcrates.
+
+## License
 
 [MIT](LICENSE.md).
