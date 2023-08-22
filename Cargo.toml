@@ -1,2 +1,2 @@
 [workspace]
-members = ["backend", "builder", "registry-sync", "common", "frontend"]
+members = ["backend", "builder", "registry-sync", "common", "frontend", "database"]

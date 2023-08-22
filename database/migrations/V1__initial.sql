@@ -1,0 +1,5 @@
+
+
+CREATE TABLE crates(
+    crate_id INTEGER NOT NULL PRIMARY KEY
+);
