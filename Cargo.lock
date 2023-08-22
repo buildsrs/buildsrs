@@ -296,11 +296,13 @@ dependencies = [
 name = "buildsrs-registry-sync"
 version = "0.1.0"
 dependencies = [
+ "buildsrs-database",
  "clap",
  "crates-index",
  "env_logger",
  "humantime",
  "log",
+ "tokio",
  "url",
 ]
 

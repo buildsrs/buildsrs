@@ -1,11 +1,14 @@
 use clap::Parser;
 use std::path::PathBuf;
 use crates_index::{Crate, GitIndex};
+use buildsrs_database::Database;
 use url::Url;
 use log::*;
-use std::time::Duration;
-use std::thread::sleep;
-use std::collections::BTreeMap;
+use std::{
+    time::Duration,
+    thread::sleep,
+    collections::BTreeMap,
+};
 
 #[derive(Parser, PartialEq, Clone, Debug)]
 pub struct Options {
@@ -20,11 +23,19 @@ pub struct Options {
     /// Interval to sync registry at.
     #[clap(short, long, env = "SYNC_INTERVAL", value_parser = humantime::parse_duration, default_value = "1h")]
     interval: Duration,
+
+    /// Database to connect to
+    #[clap(short, long, env = "DATABASE")]
+    database: String,
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     env_logger::init();
     let options = Options::parse();
+
+    info!("Connecting to database");
+    let database = Database::connect(&options.database).await.unwrap();
 
     info!("Setting up registry index");
     let mut index = GitIndex::with_path(&options.path, options.registry.as_str()).unwrap();
@@ -32,7 +43,9 @@ fn main() {
 
     loop {
         info!("Syncing crates");
-        let crates: BTreeMap<String, Crate> = index.crates().map(|c| (c.name().into(), c)).collect();
+        for krate in index.crates() {
+            database.crate_add(krate.name()).await.unwrap();
+        }
 
         info!("Sleeping until next iteration");
         sleep(options.interval);

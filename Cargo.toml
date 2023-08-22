@@ -1,2 +1,7 @@
 [workspace]
 members = ["backend", "builder", "registry-sync", "common", "frontend", "database"]
+
+[workspace.dependencies]
+buildsrs-database = { path = "./database" }
+buildsrs-common= { path = "./common" }
+tokio = { version = "1.32.0" }

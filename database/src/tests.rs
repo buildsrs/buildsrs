@@ -12,3 +12,10 @@ async fn with_database<O: Future<Output = ()>, F: FnOnce(Database) -> O>(f: F) {
 async fn test_statements() {
     with_database(|_database: Database| async move {}).await;
 }
+
+#[tokio::test]
+async fn test_registry() {
+    with_database(|database: Database| async move {
+        database.crate_add("serde").await.unwrap();
+    }).await;
+}

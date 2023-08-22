@@ -12,7 +12,7 @@ database:
 
 # start repl with specified postgres database
 database-repl DATABASE:
-    docker exec -it digitalshed_postgres psql -U postgres -d {{DATABASE}}
+    docker exec -it buildsrs_postgres psql -U postgres -d {{DATABASE}}
 
 # run all unit tests
 test filter='':
@@ -21,3 +21,15 @@ test filter='':
 # generate test coverage report
 coverage:
     DATABASE="host=localhost user={{postgres_user}} password={{postgres_pass}}" cargo llvm-cov --all-features
+
+# launch frontend
+frontend:
+    cd frontend && trunk serve
+
+# run migrations on database
+migrate:
+    cargo run -p buildsrs-database --features migrations --bin migrate -- host=localhost user={{postgres_user}} password={{postgres_pass}}
+
+# launch registry sync
+registry-sync:
+    RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database "host=localhost user={{postgres_user}} password={{postgres_pass}}"
