@@ -4,7 +4,7 @@ stages:
 
 build:
   stage: build
-  image: rust
+  image: rust:1.71-bookworm
   variables:
     TRUNK_VERSION: 0.17.5
   before_script:
