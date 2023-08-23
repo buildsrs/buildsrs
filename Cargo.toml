@@ -1,7 +1,15 @@
 [workspace]
-members = ["backend", "builder", "registry-sync", "common", "frontend", "database"]
+resolver = "2"
+members = [
+    "backend",
+    "builder",
+    "common",
+    "database",
+    "frontend",
+    "registry-sync",
+]
 
 [workspace.dependencies]
 buildsrs-database = { path = "./database" }
 buildsrs-common= { path = "./common" }
-tokio = { version = "1.32.0" }
+tokio = { version = "1.28.0" }

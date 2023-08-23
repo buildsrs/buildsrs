@@ -10,5 +10,5 @@ env_logger = "0.10.0"
 humantime = "2.1.0"
 log = "0.4.20"
 url = "2.4.0"
-tokio = { workspace = true }
+tokio = "1.32.0"
 buildsrs-database = { workspace = true }

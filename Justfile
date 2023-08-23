@@ -1,6 +1,7 @@
 # local postgres credentials
 postgres_user := "postgres"
 postgres_pass := "password"
+postgres_str := "host=localhost user=" + postgres_user + " password=" + postgres_pass
 
 # list targets and help
 list:
@@ -16,11 +17,13 @@ database-repl DATABASE:
 
 # run all unit tests
 test filter='':
-    DATABASE="host=localhost user={{postgres_user}} password={{postgres_pass}}" cargo test --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-database --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-backend --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-backend --all-features {{filter}}
 
 # generate test coverage report
 coverage:
-    DATABASE="host=localhost user={{postgres_user}} password={{postgres_pass}}" cargo llvm-cov --all-features
+    DATABASE="{{postgres_str}}" cargo llvm-cov --all-features
 
 # launch frontend
 frontend:
@@ -31,5 +34,13 @@ migrate:
     cargo run -p buildsrs-database --features migrations --bin migrate -- host=localhost user={{postgres_user}} password={{postgres_pass}}
 
 # launch registry sync
+backend:
+    RUST_LOG=debug cargo run -p buildsrs-backend -- --database "{{postgres_str}}"
+
+# launch registry sync
 registry-sync:
-    RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database "host=localhost user={{postgres_user}} password={{postgres_pass}}"
+    RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database "{{postgres_str}}"
+
+# Format source with rustfmt nightly
+format:
+    cargo +nightly fmt --all

@@ -1,14 +1,9 @@
-use clap::Parser;
-use std::path::PathBuf;
-use crates_index::{Crate, GitIndex};
 use buildsrs_database::Database;
-use url::Url;
+use clap::Parser;
+use crates_index::{Crate, GitIndex};
 use log::*;
-use std::{
-    time::Duration,
-    thread::sleep,
-    collections::BTreeMap,
-};
+use std::{collections::BTreeMap, path::PathBuf, thread::sleep, time::Duration};
+use url::Url;
 
 #[derive(Parser, PartialEq, Clone, Debug)]
 pub struct Options {

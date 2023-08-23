@@ -17,5 +17,6 @@ async fn test_statements() {
 async fn test_registry() {
     with_database(|database: Database| async move {
         database.crate_add("serde").await.unwrap();
-    }).await;
+    })
+    .await;
 }
