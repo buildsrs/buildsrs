@@ -3,8 +3,10 @@ use anyhow::Result;
 use axum::{Router, Server};
 use std::net::SocketAddr;
 
+mod crates;
+
 fn routes() -> Router<Backend> {
-    Router::new()
+    Router::new().nest("/api/v1", crates::routes())
 }
 
 impl Backend {

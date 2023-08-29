@@ -39,7 +39,15 @@ async fn main() {
     loop {
         info!("Syncing crates");
         for krate in index.crates() {
-            database.crate_add(krate.name()).await.unwrap();
+            if let Some(krate) = index.crate_(krate.name()) {
+                database.crate_add(krate.name()).await.unwrap();
+                for version in krate.versions() {
+                    database
+                        .crate_version_add(krate.name(), version.version(), "", version.is_yanked())
+                        .await
+                        .unwrap();
+                }
+            }
         }
 
         info!("Sleeping until next iteration");

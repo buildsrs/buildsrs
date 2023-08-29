@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.3.23", features = ["derive", "env"] }
-crates-index = { version = "2.1.0", features = ["git", "git-https"] }
+crates-index = { version = "2.1.0", features = ["git", "git-https", "git-performance"] }
 env_logger = "0.10.0"
 humantime = "2.1.0"
 log = "0.4.20"

@@ -14,20 +14,56 @@ mod tests;
 mod util;
 
 statements!(
+    /// Add new builder
+    fn builder_add(pubkey: &str) {
+        "INSERT INTO builders(builder_pubkey) VALUES ($1)
+        ON CONFLICT DO NOTHING"
+    }
+
+    /// Create a new target
+    fn target_add(name: &str) {
+        "INSERT INTO targets(target_name) VALUES ($1)
+        ON CONFLICT DO NOTHING"
+    }
+
     /// Add a crate to the database.
     fn crate_add(name: &str) {
-        "INSERT INTO registry_crates(name) VALUES ($1)"
+        "INSERT INTO registry_crates(crate_name) VALUES ($1)
+        ON CONFLICT DO NOTHING"
     }
 
     /// Add a crate version to the database.
-    fn version_add(krate: &str, version: &str, checksum: &str, yanked: bool) {
-        "INSERT INTO registry_crate_versions(crate_id, version, checksum, yanked)
+    fn crate_version_add(krate: &str, version: &str, checksum: &str, yanked: bool) {
+        "INSERT INTO registry_versions(crate_id, version, checksum, yanked)
         VALUES (
-            (SELECT crate_id FROM registry_crates WHERE name = $1),
+            (SELECT crate_id FROM registry_crates WHERE crate_name = $1),
             $2, $3, $4
-        )"
+        )
+        ON CONFLICT (version) DO UPDATE SET yanked = $4"
     }
 
+    let crate_versions = "
+        SELECT version
+        FROM registry_versions_view
+        WHERE crate_name = $1
+    ";
+    let version_info = "
+        SELECT
+            yanked
+        FROM registry_versions_view
+        WHERE
+            crate_name = $1
+            AND version = $2
+    ";
+    let job_create = "
+        INSERT INTO build_jobs(builder_id, target_id, version_id)
+        VALUES (
+            $1,
+            $2,
+            (SELECT version_id FROM build_queue WHERE target_id = $2)
+        )
+        RETURNING (job_id)
+    ";
     let crate_list = "SELECT 1";
     let crate_query = "SELECT 1";
 );
@@ -75,5 +111,12 @@ impl Database<Client> {
             statements: self.statements.clone(),
             connection: self.connection.transaction().await?,
         })
+    }
+}
+
+impl Database<Transaction<'_>> {
+    /// Commit this transaction.
+    pub async fn commit(self) -> Result<(), Error> {
+        self.connection.commit().await
     }
 }
