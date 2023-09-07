@@ -30,7 +30,7 @@ async fn main() {
     let options = Options::parse();
 
     info!("Connecting to database");
-    let database = Database::connect(&options.database).await.unwrap();
+    let mut database = Database::connect(&options.database).await.unwrap();
 
     info!("Setting up registry index");
     let mut index = GitIndex::with_path(&options.path, options.registry.as_str()).unwrap();
@@ -38,6 +38,7 @@ async fn main() {
 
     loop {
         info!("Syncing crates");
+        let transaction = database.transaction().await.unwrap();
         for krate in index.crates() {
             if let Some(krate) = index.crate_(krate.name()) {
                 database.crate_add(krate.name()).await.unwrap();
@@ -49,6 +50,8 @@ async fn main() {
                 }
             }
         }
+
+        transaction.commit().await.unwrap();
 
         info!("Sleeping until next iteration");
         sleep(options.interval);
