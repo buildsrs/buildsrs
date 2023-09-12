@@ -1,0 +1,32 @@
+version: "3.8"
+services:
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_USER: "user"
+    volumes:
+      - /mnt/postgres_data/pgdata:/var/lib/postgresql/data
+    deploy:
+      placement:
+        constraints:
+          - node.hostname==database
+  migrations:
+    image: alpine
+    command:
+      - "true"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+  backend:
+    image: alpine
+    command:
+      - "sleep 99"
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.labels.backend==true
+
+

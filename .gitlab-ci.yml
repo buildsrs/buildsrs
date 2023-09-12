@@ -2,7 +2,33 @@ stages:
   - build
   - publish
 
-build:
+backend:
+  stage: build
+  image: docker
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build . -f backend/Dockerfile -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG
+    - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG"
+  only:
+    - main
+    - prod
+
+registry-sync:
+  stage: build
+  image: docker
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build . -f backend/Dockerfile -t $CI_REGISTRY_IMAGE/registry-sync:$CI_COMMIT_REF_SLUG
+    - docker push "$CI_REGISTRY_IMAGE/registry-sync:$CI_COMMIT_REF_SLUG"
+  only:
+    - main
+    - prod
+
+frontend:
   stage: build
   image: rust:1.71-bookworm
   variables:
@@ -15,6 +41,22 @@ build:
   artifacts:
     paths:
       - frontend/dist
+
+deploy:
+  stage: publish
+  image: docker
+  variables:
+    DOCKER_HOST: ssh://$DEPLOY_HOST
+  before_script:
+    - mkdir ~/.ssh
+    - mv $DEPLOY_KEY ~/.ssh/id_ed25519
+    - mv $DEPLOY_HOST_KEY ~/.ssh/known_hosts
+    - chmod 0600 ~/.ssh/id_ed25519
+  script:
+    - docker stack deploy buildsrs --compose-file stack.yml
+  only:
+    - main
+    - prod
 
 pages:
   stage: publish
