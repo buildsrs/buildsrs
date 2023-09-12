@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+pub mod protocol;
+
 /// Crate info.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct CrateInfo {
