@@ -19,7 +19,8 @@ database-repl DATABASE:
 test filter='':
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-database --all-features {{filter}}
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-backend --all-features {{filter}}
-    DATABASE="{{postgres_str}}" cargo test -p buildsrs-backend --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-registry-sync --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-builder --all-features {{filter}}
 
 # generate test coverage report
 coverage:

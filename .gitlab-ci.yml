@@ -2,6 +2,26 @@ stages:
   - build
   - publish
 
+test:
+  stage: build
+  image: rust:1.71-bookworm
+  services:
+    - name: postgres:15
+      variables:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: password
+  variables:
+    DATABASE: "host=postgres user=postgres password=password"
+  before_script:
+    - apt update
+    - apt install -y cmake
+  script:
+    - cargo run -p buildsrs-database --features migrate --bin migrate
+    - cargo test -p buildsrs-database --all-features
+    - cargo test -p buildsrs-backend --all-features
+    - cargo test -p buildsrs-registry-sync --all-features
+    - cargo test -p buildsrs-builder --all-features
+
 backend:
   stage: build
   image: docker

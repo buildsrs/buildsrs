@@ -345,13 +345,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "builder"
-version = "0.1.0"
-dependencies = [
- "tokio",
-]
-
-[[package]]
 name = "buildsrs-backend"
 version = "0.1.0"
 dependencies = [
@@ -361,6 +354,13 @@ dependencies = [
  "buildsrs-database",
  "clap",
  "rust-s3",
+ "tokio",
+]
+
+[[package]]
+name = "buildsrs-builder"
+version = "0.1.0"
+dependencies = [
  "tokio",
 ]
 
