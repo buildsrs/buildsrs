@@ -81,7 +81,8 @@ CREATE TABLE build_job_artifacts(
     job_id BIGSERIAL PRIMARY KEY,
     artifact_name TEXT,
     artifact_hash TEXT,
-    artifact_signature TEXT
+    artifact_signature TEXT,
+    download_count BIGINT
 );
 
 
