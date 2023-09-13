@@ -21,6 +21,7 @@ test filter='':
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-backend --all-features {{filter}}
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-registry-sync --all-features {{filter}}
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-builder --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-common --all-features {{filter}}
 
 # generate test coverage report
 coverage:
@@ -32,7 +33,7 @@ frontend:
 
 # run migrations on database
 migrate:
-    cargo run -p buildsrs-database --features migrations --bin migrate -- host=localhost user={{postgres_user}} password={{postgres_pass}}
+    cargo run -p buildsrs-database --features migrate --bin migrate -- --database "host=localhost user={{postgres_user}} password={{postgres_pass}}"
 
 # launch registry sync
 backend:

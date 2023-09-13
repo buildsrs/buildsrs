@@ -27,7 +27,7 @@ impl TempDatabase {
     }
 
     /// Create new temporary database.
-    pub async fn create(database: &str) -> Result<(Self, Database), Error> {
+    pub async fn create(database: &str, dump: Option<&str>) -> Result<(Self, Database), Error> {
         // connect to database
         let (outer_client, connection) = connect(database, NoTls).await?;
         let outer_handle = tokio::spawn(connection);
@@ -44,6 +44,18 @@ impl TempDatabase {
         let inner_host = format!("{} dbname={}", database, database_name);
         let (mut inner_client, inner_connection) = connect(&inner_host, NoTls).await.unwrap();
         let inner_handle = tokio::spawn(inner_connection);
+
+        if let Some(dump) = dump {
+            inner_client.batch_execute(dump).await.unwrap();
+            // https://dba.stackexchange.com/questions/106057/error-no-schema-has-been-selected-to-create-in
+            inner_client
+                .execute(
+                    "SELECT pg_catalog.set_config('search_path', 'public', false);",
+                    &[],
+                )
+                .await
+                .unwrap();
+        }
 
         crate::migrations::runner()
             .run_async(&mut inner_client)
