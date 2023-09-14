@@ -90,10 +90,7 @@ deploy:
     - mv $DEPLOY_HOST_KEY ~/.ssh/known_hosts
     - chmod 0600 ~/.ssh/id_ed25519
   script:
-    - docker stack deploy buildsrs --compose-file stack.yml
-  only:
-    - main
-    - prod
+    - docker stack config -c stack.yml | docker stack deploy buildsrs --compose-file - --with-registry-auth
 
 pages:
   stage: publish

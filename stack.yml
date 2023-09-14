@@ -12,15 +12,16 @@ services:
         constraints:
           - node.hostname==database
   migrations:
-    image: alpine
-    command:
-      - "true"
+    image: "$CI_REGISTRY_IMAGE/migrate:$CI_COMMIT_REF_SLUG"
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
+      placement:
+        constraints:
+          - node.hostname==database
   backend:
-    image: alpine
+    image: "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG"
     command:
       - "sleep 99"
     deploy:
