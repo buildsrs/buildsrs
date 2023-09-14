@@ -31,9 +31,6 @@ backend:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build . -f backend/Dockerfile -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG
     - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG"
-  only:
-    - main
-    - prod
 
 migrate:
   stage: build
@@ -42,11 +39,8 @@ migrate:
     - docker:dind
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build . -f migrate/Dockerfile -t $CI_REGISTRY_IMAGE/migrate:$CI_COMMIT_REF_SLUG
+    - docker build . -f database/Dockerfile -t $CI_REGISTRY_IMAGE/migrate:$CI_COMMIT_REF_SLUG
     - docker push "$CI_REGISTRY_IMAGE/migrate:$CI_COMMIT_REF_SLUG"
-  only:
-    - main
-    - prod
 
 builder:
   stage: build
@@ -57,9 +51,6 @@ builder:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build . -f builder/Dockerfile -t $CI_REGISTRY_IMAGE/builder:$CI_COMMIT_REF_SLUG
     - docker push "$CI_REGISTRY_IMAGE/builder:$CI_COMMIT_REF_SLUG"
-  only:
-    - main
-    - prod
 
 registry-sync:
   stage: build
@@ -70,9 +61,6 @@ registry-sync:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build . -f backend/Dockerfile -t $CI_REGISTRY_IMAGE/registry-sync:$CI_COMMIT_REF_SLUG
     - docker push "$CI_REGISTRY_IMAGE/registry-sync:$CI_COMMIT_REF_SLUG"
-  only:
-    - main
-    - prod
 
 frontend:
   stage: build
