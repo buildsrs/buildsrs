@@ -90,7 +90,10 @@ deploy:
     - mv $DEPLOY_HOST_KEY ~/.ssh/known_hosts
     - chmod 0600 ~/.ssh/id_ed25519
   script:
-    - docker stack config -c stack.yml | docker stack deploy buildsrs --compose-file - --with-registry-auth
+    - docker stack config -c stack.yml | docker stack deploy "buildsrs-$CI_COMMIT_REF_SLUG" --compose-file - --with-registry-auth
+  only:
+    - main
+    - prod
 
 pages:
   stage: publish

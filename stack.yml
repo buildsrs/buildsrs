@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: "password"
       POSTGRES_USER: "user"
     volumes:
-      - /mnt/postgres_data/pgdata:/var/lib/postgresql/data
+      - /mnt/postgres_data/$CI_COMMIT_REF_SLUG:/var/lib/postgresql/data
     deploy:
       placement:
         constraints:
