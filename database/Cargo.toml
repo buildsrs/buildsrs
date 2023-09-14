@@ -20,8 +20,8 @@ refinery = { version = "=0.8.9", features = ["tokio-postgres"] }
 
 [features]
 migrations = ["dep:refinery"]
-migrate = ["migrations", "dep:clap"]
+tools = ["migrations", "dep:clap"]
 
 [[bin]]
 name = "migrate"
-required-features = ["migrate"]
+required-features = ["tools"]

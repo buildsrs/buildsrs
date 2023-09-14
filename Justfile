@@ -33,7 +33,7 @@ frontend:
 
 # run migrations on database
 migrate:
-    cargo run -p buildsrs-database --features migrate --bin migrate -- --database "host=localhost user={{postgres_user}} password={{postgres_pass}}"
+    cargo run -p buildsrs-database --features tools --bin migrate -- --database "host=localhost user={{postgres_user}} password={{postgres_pass}}"
 
 # launch registry sync
 backend:

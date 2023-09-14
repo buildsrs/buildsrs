@@ -2,6 +2,9 @@ stages:
   - build
   - publish
 
+default:
+  interruptible: true
+
 test:
   stage: build
   image: rust:1.71-bookworm
@@ -16,7 +19,7 @@ test:
     - apt update
     - apt install -y cmake
   script:
-    - cargo run -p buildsrs-database --features migrate --bin migrate
+    - cargo run -p buildsrs-database --features tools --bin migrate
     - cargo test -p buildsrs-database --all-features
     - cargo test -p buildsrs-backend --all-features
     - cargo test -p buildsrs-registry-sync --all-features
