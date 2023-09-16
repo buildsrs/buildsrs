@@ -18,12 +18,14 @@ test:
   before_script:
     - apt update
     - apt install -y cmake
-  script:
     - cargo run -p buildsrs-database --features tools --bin migrate
+  script:
     - cargo test -p buildsrs-database --all-features
     - cargo test -p buildsrs-backend --all-features
-    - cargo test -p buildsrs-registry-sync --all-features
     - cargo test -p buildsrs-builder --all-features
+    - cargo test -p buildsrs-common --all-features
+    - cargo test -p buildsrs-protocol --all-features
+    - cargo test -p buildsrs-registry-sync --all-features
 
 backend:
   stage: build

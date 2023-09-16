@@ -4,7 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bytes = "1.5.0"
 serde = { version = "1.0.185", features = ["derive"] }
-ssh-key = { version = "0.6.1", features = ["ed25519"] }
 url = { version = "2.4.0", features = ["serde"] }

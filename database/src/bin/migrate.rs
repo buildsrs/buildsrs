@@ -1,5 +1,5 @@
-use tokio_postgres::{connect, NoTls};
 use clap::Parser;
+use tokio_postgres::{connect, NoTls};
 
 #[derive(Parser, Debug)]
 pub struct Options {

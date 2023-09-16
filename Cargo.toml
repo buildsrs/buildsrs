@@ -6,10 +6,12 @@ members = [
     "common",
     "database",
     "frontend",
+    "protocol",
     "registry-sync",
 ]
 
 [workspace.dependencies]
 buildsrs-database = { path = "./database" }
-buildsrs-common= { path = "./common" }
+buildsrs-common = { path = "./common" }
+buildsrs-protocol = { path = "./protocol" }
 tokio = { version = "1.28.0" }
