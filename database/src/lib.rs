@@ -26,6 +26,10 @@ statements!(
         ON CONFLICT DO NOTHING"
     }
 
+    fn builder_remove(fingerprint: &str) {
+        "SELECT 1"
+    }
+
     /// Create a new target
     fn target_add(name: &str) {
         "INSERT INTO targets(target_name) VALUES ($1)
@@ -47,6 +51,13 @@ statements!(
         )
         ON CONFLICT (version) DO UPDATE SET yanked = $4"
     }
+
+    let builder_pubkey_by_fingerprint = "
+        SELECT builder_pubkey
+        FROM builders
+        WHERE builder_fingerprint_sha256 = $1
+        OR builder_fingerprint_sha512 = $1
+    ";
 
     let crate_versions = "
         SELECT version
@@ -89,7 +100,15 @@ pub struct Database<T = Client> {
     pub connection: T,
 }
 
-impl<T: GenericClient> Database<T> {}
+impl<T: GenericClient> Database<T> {
+    pub async fn builder_lookup(&self, fingerprint: &str) -> Result<String, Error> {
+        let row = self.connection.query_one(
+            &self.statements.builder_pubkey_by_fingerprint,
+            &[&fingerprint],
+        ).await?;
+        Ok(row.try_get("builder_pubkey")?)
+    }
+}
 
 pub type ConnectionStream = Pin<Box<dyn Stream<Item = Result<AsyncMessage, Error>> + Send>>;
 

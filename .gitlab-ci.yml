@@ -18,7 +18,7 @@ test:
   before_script:
     - apt update
     - apt install -y cmake
-    - cargo run -p buildsrs-database --features tools --bin migrate
+    - cargo run -p buildsrs-database --features tools -- migrate
   script:
     - cargo test -p buildsrs-database --all-features
     - cargo test -p buildsrs-backend --all-features
