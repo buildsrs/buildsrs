@@ -1,9 +1,10 @@
 use buildsrs_database::{migrations, Database};
 use clap::Parser;
-use ssh_key::{HashAlg, PublicKey};
+use ssh_key::PublicKey;
 use std::path::PathBuf;
 use tokio::fs::read_to_string;
 use tokio_postgres::{connect, NoTls};
+use uuid::Uuid;
 
 #[derive(Parser, Debug)]
 pub struct Options {
@@ -28,6 +29,9 @@ pub enum BuilderCommand {
     Add {
         #[clap(env)]
         public_key_file: PathBuf,
+
+        #[clap(long, env, default_value = "")]
+        comment: String,
     },
     Remove {
         #[clap(env)]
@@ -49,19 +53,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {}
     }
 
-    let database = Database::new(client).await?;
+    let mut database = Database::new(client).await?;
 
     match options.command {
         Command::Migrate => unreachable!(),
         Command::Builder { command } => match command {
-            BuilderCommand::Add { public_key_file } => {
+            BuilderCommand::Add { public_key_file, comment } => {
                 let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
-                let encoded = key.to_openssh()?;
-                let fingerprint_sha256 = key.fingerprint(HashAlg::Sha256).to_string();
-                let fingerprint_sha512 = key.fingerprint(HashAlg::Sha512).to_string();
-                database
-                    .builder_add(&encoded, &fingerprint_sha256, &fingerprint_sha512)
-                    .await?;
+                let transaction = database.transaction().await?;
+                transaction.builder_add(Uuid::new_v4(), &key, &comment).await?;
+                transaction.commit().await?;
             }
             BuilderCommand::Remove { public_key_file } => {
                 let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;

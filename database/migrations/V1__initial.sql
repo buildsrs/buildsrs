@@ -1,9 +1,15 @@
--- registered builders and their tokens
+-- registered builders
 CREATE TABLE builders(
     builder_id BIGSERIAL PRIMARY KEY,
+    builder_uuid UUID UNIQUE,
     builder_pubkey TEXT UNIQUE,
-    builder_fingerprint_sha256 TEXT UNIQUE,
-    builder_fingerprint_sha512 TEXT UNIQUE
+    builder_comment TEXT
+);
+
+-- builder fingerprints
+CREATE TABLE builder_fingerprints(
+    fingerprint TEXT PRIMARY KEY,
+    builder_id BIGINT REFERENCES builders(builder_id) ON DELETE CASCADE
 );
 
 -- targets that can be built
@@ -12,15 +18,11 @@ CREATE TABLE targets(
     target_name TEXT UNIQUE
 );
 
-CREATE INDEX targets_name ON targets(target_name);
-
 -- registry crates
 CREATE TABLE registry_crates(
     crate_id BIGSERIAL PRIMARY KEY,
     crate_name TEXT UNIQUE
 );
-
-CREATE INDEX registry_crates_name ON registry_crates(crate_name);
 
 -- registry crate versions
 CREATE TABLE registry_versions(
@@ -32,8 +34,6 @@ CREATE TABLE registry_versions(
     prerelease BOOLEAN,
     download_url TEXT
 );
-
-CREATE INDEX registry_versions_version ON registry_versions(crate_id, version);
 
 -- view for registry versions
 CREATE VIEW registry_versions_view AS
