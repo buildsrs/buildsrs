@@ -1,10 +1,10 @@
 -- registered builders and their tokens
 CREATE TABLE builders(
     builder_id BIGSERIAL PRIMARY KEY,
-    builder_pubkey TEXT UNIQUE
+    builder_pubkey TEXT UNIQUE,
+    builder_fingerprint_sha256 TEXT UNIQUE,
+    builder_fingerprint_sha512 TEXT UNIQUE
 );
-
-CREATE INDEX builders_pubkey ON builders(builder_pubkey);
 
 -- targets that can be built
 CREATE TABLE targets(

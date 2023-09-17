@@ -14,9 +14,15 @@ mod tests;
 mod util;
 
 statements!(
-    /// Add new builder
-    fn builder_add(pubkey: &str) {
-        "INSERT INTO builders(builder_pubkey) VALUES ($1)
+    /// Register new builder by SSH pubkey.
+    fn builder_add(pubkey: &str, fingerprint_sha256: &str, fingerprint_sha512: &str) {
+        "INSERT INTO
+            builders(
+                builder_pubkey,
+                builder_fingerprint_sha256,
+                builder_fingerprint_sha512
+            )
+        VALUES ($1, $2, $3)
         ON CONFLICT DO NOTHING"
     }
 

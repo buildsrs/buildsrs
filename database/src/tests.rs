@@ -25,8 +25,8 @@ async fn with_database_from_dump<O: Future<Output = ()>, F: FnOnce(Database) -> 
 }
 
 #[tokio::test]
-async fn test_dump_2023_09_13() {
-    let dump = decompress(include_bytes!("../dumps/2023-09-13.sql.xz"));
+async fn test_dump_2023_09_17() {
+    let dump = decompress(include_bytes!("../dumps/2023-09-17.sql.xz"));
     let dump = std::str::from_utf8(&dump[..]).unwrap();
     with_database_from_dump(&dump[..], |database: Database| async move {}).await;
 }

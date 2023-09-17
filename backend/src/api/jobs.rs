@@ -1,15 +1,14 @@
 use crate::Backend;
 use axum::{
-    extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
-    },
+    extract::{State, ws::{WebSocket, WebSocketUpgrade, Message}},
     response::Response,
     routing::get,
     Router,
 };
-use buildsrs_protocol::{ssh_key::Fingerprint, *};
 use futures::StreamExt;
+use buildsrs_protocol::{
+    *, ssh_key::Fingerprint
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum WebSocketError {
@@ -58,23 +57,22 @@ impl Connection {
     }
 
     async fn send(&mut self, message: ServerMessage) -> Result<(), WebSocketError> {
-        self.websocket
-            .send(Message::Text(serde_json::to_string(&message)?))
-            .await?;
+        self.websocket.send(Message::Text(serde_json::to_string(&message)?)).await?;
         Ok(())
     }
 
     async fn challenge(&mut self) -> Result<(), WebSocketError> {
         let challenge = [0xab].to_vec();
-        self.send(ServerMessage::ChallengeRequest(challenge.clone().into()))
-            .await?;
+        self.send(ServerMessage::ChallengeRequest(challenge.clone().into())).await?;
         loop {
             let message = self.recv().await?;
             match message {
-                ClientMessage::ChallengeResponse(response) => match challenge == response {
-                    true => return Ok(()),
-                    false => return Err(WebSocketError::ChallengeError),
-                },
+                ClientMessage::ChallengeResponse(response) => {
+                    match challenge == response {
+                        true => return Ok(()),
+                        false => return Err(WebSocketError::ChallengeError),
+                    }
+                }
                 _ => continue,
             }
         }
@@ -84,7 +82,9 @@ impl Connection {
 impl Backend {
     pub async fn handle_jobs(&self, mut websocket: WebSocket) -> Result<(), WebSocketError> {
         let fingerprint = extract_fingerprint(&mut websocket).await?;
-        let mut connection = Connection { websocket };
+        let mut connection = Connection {
+            websocket,
+        };
         connection.challenge().await?;
 
         Ok(())
@@ -96,7 +96,7 @@ async fn jobs_websocket(State(backend): State<Backend>, ws: WebSocketUpgrade) ->
         let backend = backend.clone();
         async move {
             match backend.handle_jobs(socket).await {
-                Ok(()) => {}
+                Ok(()) => {},
                 Err(error) => println!("{error}"),
             }
         }
