@@ -55,7 +55,7 @@ Prerequisites:
 Tests:
 
     just database
-    just migrate
+    just database-cli migrate
     just test
 
 For more information, check the `README.md` files in the respective subcrates.

@@ -8,9 +8,9 @@ used to search and view crate information, as well as download builds.
 In order to launch the backend locally, you will need to run the following steps:
 
 ```
-just database # launch the database
-just migrate  # run migrations
-just backend  # launch backend
+just database              # launch the database
+just database-cli migrate  # run migrations
+just backend               # launch backend
 ```
 
 [builds.rs]: https://builds.rs

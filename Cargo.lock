@@ -399,6 +399,7 @@ dependencies = [
  "postgres-types",
  "rand",
  "refinery",
+ "ssh-key",
  "strum",
  "time",
  "tokio",

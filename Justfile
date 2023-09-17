@@ -19,6 +19,14 @@ database-repl DATABASE:
 database-dump NAME='latest' DATABASE='postgres':
     docker exec -it buildsrs_postgres pg_dump -U postgres -d {{DATABASE}} --inserts | xz > database/dumps/{{NAME}}.sql.xz
 
+# test database
+database-test:
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-database --all-features
+
+# run database cli
+database-cli *COMMAND:
+    cargo run -p buildsrs-database --features tools -- --database "{{postgres_str}}" {{COMMAND}}
+
 # run all unit tests
 test filter='':
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-database -p buildsrs-backend -p buildsrs-builder -p buildsrs-common -p buildsrs-protocol --all-features {{filter}}
@@ -31,10 +39,6 @@ coverage:
 # launch frontend
 frontend:
     cd frontend && trunk serve
-
-# run migrations on database
-migrate:
-    cargo run -p buildsrs-database --features tools --bin migrate -- --database "host=localhost user={{postgres_user}} password={{postgres_pass}}"
 
 # launch registry sync
 backend:
