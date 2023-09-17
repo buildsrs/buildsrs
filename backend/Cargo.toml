@@ -4,10 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.6.20"
+axum = { version = "0.6.20", features = ["ws"] }
 rust-s3 = { version = "0.33.0", features = ["tokio"] }
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 buildsrs-database = { workspace = true }
+buildsrs-protocol = { workspace = true }
 clap = { version = "4.3.24", features = ["derive", "env"] }
 anyhow = "1.0.75"
 apply = "0.3.0"
+futures = "0.3.28"
+thiserror = "1.0.48"
+serde_json = "1.0.107"

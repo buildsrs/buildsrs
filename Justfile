@@ -40,6 +40,10 @@ backend:
 registry-sync:
     RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database "{{postgres_str}}"
 
+# launch builder
+builder:
+    RUST_LOG=debug cargo run -p buildsrs-builder -- --private-key-file ~/.ssh/id_ed25519 --websocket ws://localhost:8000/api/v1/jobs
+
 # Format source with rustfmt nightly
 format:
     cargo +nightly fmt --all

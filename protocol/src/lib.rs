@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+pub use ssh_key;
 use ssh_key::{Fingerprint, HashAlg, PrivateKey, PublicKey, SshSig};
 use url::Url;
 
@@ -58,7 +59,6 @@ impl<T: Serialize> SignedMessage<T> {
         Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {

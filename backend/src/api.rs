@@ -4,9 +4,11 @@ use axum::{Router, Server};
 use std::net::SocketAddr;
 
 mod crates;
+mod jobs;
 
 fn routes() -> Router<Backend> {
-    Router::new().nest("/api/v1", crates::routes())
+    let router = Router::new().merge(crates::routes()).merge(jobs::routes());
+    Router::new().nest("/api/v1", router)
 }
 
 impl Backend {
