@@ -1,6 +1,6 @@
 use buildsrs_database::{migrations, Database};
 use clap::Parser;
-use ssh_key::PublicKey;
+use ssh_key::{HashAlg, PublicKey};
 use std::path::PathBuf;
 use tokio::fs::read_to_string;
 use tokio_postgres::{connect, NoTls};
@@ -22,6 +22,10 @@ pub enum Command {
         #[clap(subcommand)]
         command: BuilderCommand,
     },
+    Target {
+        #[clap(subcommand)]
+        command: TargetCommand,
+    },
 }
 
 #[derive(Parser, Debug)]
@@ -33,10 +37,33 @@ pub enum BuilderCommand {
         #[clap(long, env, default_value = "")]
         comment: String,
     },
-    Remove {
+    Edit {
         #[clap(env)]
         public_key_file: PathBuf,
+
+        #[clap(long, env)]
+        enabled: Option<bool>,
+
+        #[clap(long, env)]
+        comment: Option<String>,
     },
+    List,
+}
+
+#[derive(Parser, Debug)]
+pub enum TargetCommand {
+    Add {
+        #[clap(env)]
+        target: String,
+    },
+    Edit {
+        #[clap(env)]
+        target: String,
+
+        #[clap(long, env)]
+        enabled: Option<bool>,
+    },
+    List,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -58,14 +85,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match options.command {
         Command::Migrate => unreachable!(),
         Command::Builder { command } => match command {
-            BuilderCommand::Add { public_key_file, comment } => {
+            BuilderCommand::Add {
+                public_key_file,
+                comment,
+            } => {
                 let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
                 let transaction = database.transaction().await?;
-                transaction.builder_add(Uuid::new_v4(), &key, &comment).await?;
+                transaction
+                    .builder_add(Uuid::new_v4(), &key, &comment)
+                    .await?;
                 transaction.commit().await?;
             }
-            BuilderCommand::Remove { public_key_file } => {
+            BuilderCommand::Edit {
+                public_key_file,
+                enabled,
+                comment,
+            } => {
                 let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
+                let builder = database
+                    .builder_lookup(&key.fingerprint(HashAlg::Sha512).to_string())
+                    .await?;
+                let transaction = database.transaction().await?;
+                if let Some(enabled) = enabled {
+                    transaction.builder_set_enabled(builder, enabled).await?;
+                }
+
+                if let Some(comment) = comment {
+                    transaction.builder_set_comment(builder, &comment).await?;
+                }
+
+                transaction.commit().await?;
+            }
+            BuilderCommand::List => {
+                let transaction = database.transaction().await?;
+                let builders = transaction.builder_list().await?;
+                for builder in &builders {
+                    let info = transaction.builder_get(*builder).await?;
+                    println!("{info:#?}");
+                }
+            }
+        },
+        Command::Target { command } => match command {
+            TargetCommand::Add { target } => {
+                database.target_add(&target).await?;
+            }
+            TargetCommand::Edit { target, enabled } => {}
+            TargetCommand::List => {
+                let transaction = database.transaction().await?;
+                for target in &transaction.target_list().await? {
+                    let info = transaction.target_info(&target).await?;
+                    println!("{target:#?}");
+                }
             }
         },
     }

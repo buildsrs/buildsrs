@@ -1,11 +1,11 @@
 use futures::{Stream, StreamExt};
+use ssh_key::{HashAlg, PublicKey};
 use std::{pin::Pin, sync::Arc};
 use tokio::select;
 use tokio_postgres::{
     connect, types::Json, AsyncMessage, Client, Error, GenericClient, NoTls, Statement, Transaction,
 };
 use uuid::Uuid;
-use ssh_key::{HashAlg, PublicKey};
 
 #[macro_use]
 mod macros;
@@ -15,42 +15,65 @@ mod temp;
 mod tests;
 mod util;
 
+#[derive(Clone, Debug)]
 pub struct Builder {
     pub uuid: Uuid,
     pub public_key: String,
     pub comment: String,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct TargetInfo {
+    pub name: String,
+    pub enabled: bool,
 }
 
 statements!(
-    /// Register new builder by SSH pubkey.
-    fn builder_register(uuid: Uuid, pubkey: &str, comment: &str) {
+    /// Register new builder by SSH pubkey and comment.
+    fn builder_register(uuid: Uuid, pubkey: i64, comment: &str) {
         "INSERT INTO
             builders(
-                builder_uuid,
-                builder_pubkey,
-                builder_comment
+                uuid,
+                pubkey,
+                comment
             )
-        VALUES ($1, $2, $3)
-        ON CONFLICT (builder_pubkey) DO UPDATE
-        SET builder_comment = $3"
+        VALUES ($1, $2, $3)"
     }
 
-    fn builder_fingerprint(uuid: Uuid, fingerprint: &str) {
-        "INSERT INTO builder_fingerprints(fingerprint, builder_id)
-        VALUES (
-            $2,
-            (SELECT builder_id FROM builders WHERE builder_uuid = $1)
-        )
+    /// Add a fingerprint to a registered builder.
+    fn fingerprint_add(pubkey: i64, fingerprint: &str) {
+        "INSERT INTO fingerprints(pubkey, fingerprint)
+        VALUES ($1, $2)
         ON CONFLICT DO NOTHING"
+    }
+
+    /// Set builder enabled
+    fn builder_set_enabled(uuid: Uuid, enabled: bool) {
+        "UPDATE builders
+        SET enabled = $2
+        WHERE uuid = $1"
+    }
+
+    /// Set builder comment
+    fn builder_set_comment(uuid: Uuid, commend: &str) {
+        "UPDATE builders
+        SET comment = $2
+        WHERE uuid = $1"
     }
 
     fn builder_remove(fingerprint: &str) {
         "SELECT 1"
     }
 
+    /// Request a job for a builder.
+    fn builder_request(builder: Uuid, target: &str) {
+        "SELECT 1"
+    }
+
     /// Create a new target
     fn target_add(name: &str) {
-        "INSERT INTO targets(target_name) VALUES ($1)
+        "INSERT INTO targets(name) VALUES ($1)
         ON CONFLICT DO NOTHING"
     }
 
@@ -71,17 +94,33 @@ statements!(
     }
 
     let builder_by_fingerprint = "
-        SELECT builder_uuid
+        SELECT uuid
         FROM builders
-        JOIN builder_fingerprints
-        ON builders.builder_id = builder_fingerprints.builder_id
+        JOIN fingerprints_view
+        ON builders.pubkey = fingerprints_view.id
         WHERE fingerprint = $1
     ";
 
     let builder_get = "
         SELECT *
+        FROM builders_view
+        WHERE uuid = $1
+    ";
+
+    let builder_list = "
+        SELECT uuid
         FROM builders
-        WHERE builder_uuid = $1
+    ";
+
+    let target_list = "
+        SELECT name
+        FROM targets
+    ";
+
+    let target_info = "
+        SELECT *
+        FROM targets
+        WHERE name = $1
     ";
 
     let crate_versions = "
@@ -102,12 +141,20 @@ statements!(
         VALUES (
             $1,
             $2,
-            (SELECT version_id FROM build_queue WHERE target_id = $2)
+            (SELECT version_id FROM build_queue WHERE id = $2)
         )
         RETURNING (job_id)
     ";
     let crate_list = "SELECT 1";
     let crate_query = "SELECT 1";
+
+    let pubkey_add = "
+        INSERT INTO pubkeys (encoded)
+        VALUES ($1)
+        ON CONFLICT (encoded)
+        DO NOTHING
+        RETURNING id;
+    ";
 );
 
 #[cfg(any(feature = "migrations", test))]
@@ -127,22 +174,50 @@ pub struct Database<T = Client> {
 
 impl<T: GenericClient> Database<T> {
     pub async fn builder_lookup(&self, fingerprint: &str) -> Result<Uuid, Error> {
-        let row = self.connection.query_one(
-            &self.statements.builder_by_fingerprint,
-            &[&fingerprint],
-        ).await?;
-        Ok(row.try_get("builder_uuid")?)
+        let row = self
+            .connection
+            .query_one(&self.statements.builder_by_fingerprint, &[&fingerprint])
+            .await?;
+        Ok(row.try_get("uuid")?)
     }
 
     pub async fn builder_get(&self, builder: Uuid) -> Result<Builder, Error> {
-        let row = self.connection.query_one(
-            &self.statements.builder_get,
-            &[&builder],
-        ).await?;
+        let row = self
+            .connection
+            .query_one(&self.statements.builder_get, &[&builder])
+            .await?;
         Ok(Builder {
             uuid: builder,
-            public_key: row.try_get("builder_pubkey")?,
-            comment: row.try_get("builder_comment")?,
+            public_key: row.try_get("pubkey")?,
+            comment: row.try_get("comment")?,
+            enabled: row.try_get("enabled")?,
+        })
+    }
+
+    pub async fn builder_list(&self) -> Result<Vec<Uuid>, Error> {
+        let rows = self
+            .connection
+            .query(&self.statements.builder_list, &[])
+            .await?;
+        rows.into_iter().map(|row| row.try_get("uuid")).collect()
+    }
+
+    pub async fn target_list(&self) -> Result<Vec<String>, Error> {
+        let rows = self
+            .connection
+            .query(&self.statements.target_list, &[])
+            .await?;
+        rows.into_iter().map(|row| row.try_get("name")).collect()
+    }
+
+    pub async fn target_info(&self, target: &str) -> Result<TargetInfo, Error> {
+        let row = self
+            .connection
+            .query_one(&self.statements.target_info, &[&target])
+            .await?;
+        Ok(TargetInfo {
+            name: row.try_get("name")?,
+            enabled: row.try_get("target_enabled")?,
         })
     }
 }
@@ -183,12 +258,31 @@ impl Database<Transaction<'_>> {
     }
 
     /// Add a builder
-    pub async fn builder_add(&self, uuid: Uuid, key: &PublicKey, comment: &str) -> Result<(), Error> {
-        let encoded = key.to_openssh().unwrap();
-        self.builder_register(uuid, &encoded, comment).await?;
-        for alg in [HashAlg::Sha256, HashAlg::Sha512] {
-            self.builder_fingerprint(uuid, &key.fingerprint(alg).to_string()).await?;
-        }
+    pub async fn builder_add(
+        &self,
+        uuid: Uuid,
+        key: &PublicKey,
+        comment: &str,
+    ) -> Result<(), Error> {
+        let key = self.pubkey_add(key).await?;
+        self.builder_register(uuid, key, comment).await?;
         Ok(())
+    }
+
+    /// Add a pubkey
+    async fn pubkey_add(&self, pubkey: &PublicKey) -> Result<i64, Error> {
+        let row = self
+            .connection
+            .query_one(
+                &self.statements.pubkey_add,
+                &[&pubkey.to_openssh().unwrap()],
+            )
+            .await?;
+        let id = row.try_get("id")?;
+        for alg in [HashAlg::Sha256, HashAlg::Sha512] {
+            self.fingerprint_add(id, &pubkey.fingerprint(alg).to_string())
+                .await?;
+        }
+        Ok(id)
     }
 }
