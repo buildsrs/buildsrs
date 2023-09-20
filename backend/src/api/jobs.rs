@@ -8,6 +8,7 @@ use axum::{
     routing::get,
     Router,
 };
+use buildsrs_database::{Builder, Error as DatabaseError};
 use buildsrs_protocol::{ssh_key::Fingerprint, *};
 use futures::StreamExt;
 
@@ -23,6 +24,10 @@ pub enum WebSocketError {
     Axum(#[from] axum::Error),
     #[error(transparent)]
     Json(#[from] serde_json::Error),
+    #[error(transparent)]
+    Signature(#[from] SignatureError),
+    #[error(transparent)]
+    Database(#[from] DatabaseError),
 }
 
 async fn extract_fingerprint(socket: &mut WebSocket) -> Result<Fingerprint, WebSocketError> {
@@ -42,6 +47,7 @@ async fn extract_fingerprint(socket: &mut WebSocket) -> Result<Fingerprint, WebS
 
 struct Connection {
     websocket: WebSocket,
+    builder: Builder,
 }
 
 impl Connection {
@@ -51,7 +57,7 @@ impl Connection {
                 Message::Text(message) => serde_json::from_str(&message)?,
                 _ => continue,
             };
-            // TODO: verify
+            message.verify(&self.builder.public_key)?;
             return Ok(message.message);
         }
         Err(WebSocketError::StreamClosed)
@@ -79,14 +85,38 @@ impl Connection {
             }
         }
     }
+
+    async fn handle_job_request(
+        &mut self,
+        request: &JobRequest,
+    ) -> Result<ServerMessage, WebSocketError> {
+        todo!()
+    }
+
+    async fn handle(&mut self) -> Result<(), WebSocketError> {
+        loop {
+            let response = match self.recv().await? {
+                ClientMessage::Hello(_) => break,
+                ClientMessage::ChallengeResponse(_) => break,
+                ClientMessage::JobRequest(request) => self.handle_job_request(&request).await?,
+            };
+            self.send(response).await?;
+        }
+        Ok(())
+    }
 }
 
 impl Backend {
     pub async fn handle_jobs(&self, mut websocket: WebSocket) -> Result<(), WebSocketError> {
         let fingerprint = extract_fingerprint(&mut websocket).await?;
-        let mut connection = Connection { websocket };
+        let uuid = self
+            .database()
+            .builder_lookup(&fingerprint.to_string())
+            .await?;
+        let builder = self.database().builder_get(uuid).await?;
+        let mut connection = Connection { websocket, builder };
         connection.challenge().await?;
-
+        connection.handle().await?;
         Ok(())
     }
 }

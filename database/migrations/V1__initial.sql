@@ -54,10 +54,12 @@ CREATE TABLE "crate_versions" (
 -- build jobs that are running
 CREATE TABLE jobs(
     "id" BIGSERIAL PRIMARY KEY,
+    "uuid" UUID UNIQUE,
     "builder" BIGINT REFERENCES builders(id) ON DELETE RESTRICT,
     "target" BIGINT REFERENCES targets(id) ON DELETE RESTRICT,
     "crate_version" BIGINT REFERENCES crate_versions(id) ON DELETE RESTRICT,
-    "running" BOOLEAN,
+    "started" BIGINT,
+    "ended" BIGINT,
     "success" BOOLEAN
 );
 

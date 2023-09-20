@@ -32,4 +32,8 @@ impl Backend {
         }
         .apply(Ok)
     }
+
+    pub fn database(&self) -> &Database {
+        &self.shared.database
+    }
 }

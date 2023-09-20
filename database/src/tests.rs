@@ -75,10 +75,7 @@ async fn test_builders() {
 
         let builder = database.builder_get(uuid).await.unwrap();
         assert_eq!(builder.uuid, uuid);
-        assert_eq!(
-            builder.public_key,
-            private_key.public_key().to_openssh().unwrap()
-        );
+        assert_eq!(&builder.public_key, private_key.public_key());
         assert_eq!(builder.comment, "comment");
     })
     .await;

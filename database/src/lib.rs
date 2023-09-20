@@ -2,8 +2,9 @@ use futures::{Stream, StreamExt};
 use ssh_key::{HashAlg, PublicKey};
 use std::{pin::Pin, sync::Arc};
 use tokio::select;
+pub use tokio_postgres::Error;
 use tokio_postgres::{
-    connect, types::Json, AsyncMessage, Client, Error, GenericClient, NoTls, Statement, Transaction,
+    connect, types::Json, AsyncMessage, Client, GenericClient, NoTls, Statement, Transaction,
 };
 use uuid::Uuid;
 
@@ -18,7 +19,7 @@ mod util;
 #[derive(Clone, Debug)]
 pub struct Builder {
     pub uuid: Uuid,
-    pub public_key: String,
+    pub public_key: PublicKey,
     pub comment: String,
     pub enabled: bool,
 }
@@ -31,14 +32,9 @@ pub struct TargetInfo {
 
 statements!(
     /// Register new builder by SSH pubkey and comment.
-    fn builder_register(uuid: Uuid, pubkey: i64, comment: &str) {
-        "INSERT INTO
-            builders(
-                uuid,
-                pubkey,
-                comment
-            )
-        VALUES ($1, $2, $3)"
+    fn builder_register(uuid: Uuid, pubkey: i64) {
+        "INSERT INTO builders(uuid, pubkey)
+        VALUES ($1, $2)"
     }
 
     /// Add a fingerprint to a registered builder.
@@ -188,7 +184,10 @@ impl<T: GenericClient> Database<T> {
             .await?;
         Ok(Builder {
             uuid: builder,
-            public_key: row.try_get("pubkey")?,
+            public_key: {
+                let pubkey: &str = row.try_get("pubkey")?;
+                PublicKey::from_openssh(pubkey).unwrap()
+            },
             comment: row.try_get("comment")?,
             enabled: row.try_get("enabled")?,
         })
@@ -265,11 +264,12 @@ impl Database<Transaction<'_>> {
         comment: &str,
     ) -> Result<(), Error> {
         let key = self.pubkey_add(key).await?;
-        self.builder_register(uuid, key, comment).await?;
+        self.builder_register(uuid, key).await?;
+        self.builder_set_comment(uuid, comment).await?;
         Ok(())
     }
 
-    /// Add a pubkey
+    /// Add a pubkey.
     async fn pubkey_add(&self, pubkey: &PublicKey) -> Result<i64, Error> {
         let row = self
             .connection
