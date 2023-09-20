@@ -5,7 +5,7 @@ CREATE TABLE "pubkeys" (
 );
 
 -- ssh public key fingerprints
-CREATE TABLE "fingerprints" (
+CREATE TABLE "pubkey_fingerprints" (
     "fingerprint" TEXT PRIMARY KEY,
     "pubkey" BIGINT REFERENCES pubkeys(id) ON DELETE CASCADE
 );
@@ -34,58 +34,59 @@ CREATE TABLE "builder_targets" (
 );
 
 -- registry crates
-CREATE TABLE "registry_crates" (
-    crate_id BIGSERIAL PRIMARY KEY,
-    crate_enabled BOOLEAN DEFAULT (TRUE),
-    crate_name TEXT UNIQUE
+CREATE TABLE "crates" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "enabled" BOOLEAN DEFAULT (TRUE),
+    "name" TEXT UNIQUE
 );
 
 -- registry crate versions
-CREATE TABLE "registry_versions" (
-    version_id BIGSERIAL PRIMARY KEY,
-    crate_id BIGINT REFERENCES registry_crates(crate_id) ON DELETE CASCADE,
-    version TEXT UNIQUE,
-    checksum TEXT,
-    yanked BOOLEAN,
-    prerelease BOOLEAN,
-    download_url TEXT
+CREATE TABLE "crate_versions" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "crate" BIGINT REFERENCES crates(id) ON DELETE CASCADE,
+    "version" TEXT UNIQUE,
+    "checksum" TEXT,
+    "yanked" BOOLEAN,
+    "prerelease" BOOLEAN,
+    "download_url" TEXT
 );
 
 -- build jobs that are running
-CREATE TABLE build_jobs(
-    job_id BIGSERIAL PRIMARY KEY,
-    builder_id BIGINT,
-    target_id BIGINT,
-    version_id BIGINT,
-    running BOOLEAN,
-    success BOOLEAN
+CREATE TABLE jobs(
+    "id" BIGSERIAL PRIMARY KEY,
+    "builder" BIGINT REFERENCES builders(id) ON DELETE RESTRICT,
+    "target" BIGINT REFERENCES targets(id) ON DELETE RESTRICT,
+    "crate_version" BIGINT REFERENCES crate_versions(id) ON DELETE RESTRICT,
+    "running" BOOLEAN,
+    "success" BOOLEAN
 );
 
 -- log output from build job (json)
-CREATE TABLE "build_job_logs" (
-    build_job_log_id BIGSERIAL PRIMARY KEY,
-    job_id BIGINT,
-    contents TEXT
+CREATE TABLE "job_logs" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "job" BIGINT REFERENCES jobs(id) ON DELETE CASCADE,
+    "data" TEXT
 );
 
 -- build job artifacts
-CREATE TABLE "build_job_artifacts" (
-    job_id BIGSERIAL PRIMARY KEY,
-    artifact_name TEXT,
-    artifact_hash TEXT,
-    artifact_signature TEXT,
-    download_count BIGINT
+CREATE TABLE "job_artifacts" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "job" BIGINT REFERENCES jobs(id) ON DELETE CASCADE,
+    "name" TEXT,
+    "hash" TEXT,
+    "signature" TEXT,
+    "downloads" BIGINT
 );
 
-CREATE VIEW "fingerprints_view" AS
+CREATE VIEW "pubkey_fingerprints_view" AS
     SELECT
-        fingerprints.fingerprint,
+        pubkey_fingerprints.fingerprint,
         pubkeys.id,
         pubkeys.encoded
     FROM
-        fingerprints
+        pubkey_fingerprints
     JOIN pubkeys
-        ON fingerprints.pubkey = pubkeys.id;
+        ON pubkey_fingerprints.pubkey = pubkeys.id;
 
 CREATE VIEW "builders_view" AS
     SELECT
@@ -99,26 +100,28 @@ CREATE VIEW "builders_view" AS
         ON builders.pubkey = pubkeys.id;
 
 -- view for registry versions
-CREATE VIEW registry_versions_view AS
+CREATE VIEW crate_versions_view AS
     SELECT
-        registry_crates.crate_name,
-        registry_versions.*
-    FROM registry_crates
-    JOIN registry_versions
-        ON registry_crates.crate_id = registry_versions.crate_id;
+        crates.name,
+        crate_versions.*
+    FROM crates
+    JOIN crate_versions
+        ON crates.id = crate_versions.crate;
 
 -- build queue: per-target list of crate versions that we have not built yet.
 CREATE VIEW build_queue AS
     SELECT
-        targets.*,
-        registry_versions.*
+        targets.id AS target,
+        targets.name AS target_name,
+        crate_versions.id AS version_id,
+        crate_versions.*
     FROM targets
-    CROSS JOIN registry_versions
-    WHERE registry_versions.yanked = FALSE
+    CROSS JOIN crate_versions
+    WHERE crate_versions.yanked = FALSE
     AND NOT EXISTS (
-        SELECT job_id
-        FROM build_jobs
-        WHERE version_id = registry_versions.version_id
-        AND target_id = targets.id
+        SELECT id
+        FROM jobs
+        WHERE crate_version = crate_versions.id
+        AND target = targets.id
     );
 

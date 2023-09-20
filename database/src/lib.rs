@@ -43,7 +43,7 @@ statements!(
 
     /// Add a fingerprint to a registered builder.
     fn fingerprint_add(pubkey: i64, fingerprint: &str) {
-        "INSERT INTO fingerprints(pubkey, fingerprint)
+        "INSERT INTO pubkey_fingerprints(pubkey, fingerprint)
         VALUES ($1, $2)
         ON CONFLICT DO NOTHING"
     }
@@ -79,15 +79,15 @@ statements!(
 
     /// Add a crate to the database.
     fn crate_add(name: &str) {
-        "INSERT INTO registry_crates(crate_name) VALUES ($1)
+        "INSERT INTO crates(name) VALUES ($1)
         ON CONFLICT DO NOTHING"
     }
 
     /// Add a crate version to the database.
     fn crate_version_add(krate: &str, version: &str, checksum: &str, yanked: bool) {
-        "INSERT INTO registry_versions(crate_id, version, checksum, yanked)
+        "INSERT INTO crate_versions(crate, version, checksum, yanked)
         VALUES (
-            (SELECT crate_id FROM registry_crates WHERE crate_name = $1),
+            (SELECT id FROM crates WHERE name = $1),
             $2, $3, $4
         )
         ON CONFLICT (version) DO UPDATE SET yanked = $4"
@@ -96,8 +96,8 @@ statements!(
     let builder_by_fingerprint = "
         SELECT uuid
         FROM builders
-        JOIN fingerprints_view
-        ON builders.pubkey = fingerprints_view.id
+        JOIN pubkey_fingerprints_view
+        ON builders.pubkey = pubkey_fingerprints_view.id
         WHERE fingerprint = $1
     ";
 
@@ -125,25 +125,25 @@ statements!(
 
     let crate_versions = "
         SELECT version
-        FROM registry_versions_view
-        WHERE crate_name = $1
+        FROM crate_versions_view
+        WHERE name = $1
     ";
     let version_info = "
         SELECT
             yanked
-        FROM registry_versions_view
+        FROM crate_versions_view
         WHERE
-            crate_name = $1
+            name = $1
             AND version = $2
     ";
     let job_create = "
-        INSERT INTO build_jobs(builder_id, target_id, version_id)
+        INSERT INTO jobs(builder, target, crate_version)
         VALUES (
             $1,
             $2,
-            (SELECT version_id FROM build_queue WHERE id = $2)
+            (SELECT version_id FROM build_queue WHERE target = $2)
         )
-        RETURNING (job_id)
+        RETURNING (id)
     ";
     let crate_list = "SELECT 1";
     let crate_query = "SELECT 1";
