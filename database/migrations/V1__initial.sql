@@ -1,84 +1,111 @@
 -- ssh public keys
 CREATE TABLE "pubkeys" (
     "id" BIGSERIAL PRIMARY KEY,
-    "encoded" TEXT UNIQUE
+    "encoded" TEXT NOT NULL UNIQUE
 );
 
 -- ssh public key fingerprints
 CREATE TABLE "pubkey_fingerprints" (
     "fingerprint" TEXT PRIMARY KEY,
-    "pubkey" BIGINT REFERENCES pubkeys(id) ON DELETE CASCADE
+    "pubkey" BIGINT NOT NULL REFERENCES pubkeys(id) ON DELETE CASCADE
 );
 
--- registered builders
+-- builders that are registered
 CREATE TABLE "builders" (
     "id" BIGSERIAL PRIMARY KEY,
-    "uuid" UUID UNIQUE,
-    "pubkey" BIGINT REFERENCES pubkeys(id) ON DELETE RESTRICT,
-    "enabled" BOOLEAN DEFAULT (FALSE),
+    "uuid" UUID NOT NULL UNIQUE,
+    "pubkey" BIGINT NOT NULL REFERENCES pubkeys(id) ON DELETE RESTRICT,
+    "enabled" BOOLEAN NOT NULL DEFAULT (FALSE),
+    "connected" BOOLEAN NOT NULL DEFAULT (FALSE),
+    "last" BIGINT,
     "comment" TEXT
 );
 
--- targets that can be built
+-- targets that can be built for (example x86_64-unknown-linux-musl)
 CREATE TABLE "targets" (
     "id" BIGSERIAL PRIMARY KEY,
-    "enabled" BOOLEAN DEFAULT (FALSE),
-    "name" TEXT UNIQUE
+    "enabled" BOOLEAN NOT NULL DEFAULT (FALSE),
+    "name" TEXT NOT NULL UNIQUE
 );
 
--- targets that are enabled for every builder
+-- targets that are enabled per builder
 CREATE TABLE "builder_targets" (
-    "builder" BIGINT REFERENCES builders(id) ON DELETE CASCADE,
-    "target" BIGINT REFERENCES targets(id) ON DELETE CASCADE,
+    "builder" BIGINT NOT NULL REFERENCES builders(id) ON DELETE CASCADE,
+    "target" BIGINT NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
     PRIMARY KEY ("builder", "target")
 );
 
--- registry crates
+-- crates from the registry
 CREATE TABLE "crates" (
     "id" BIGSERIAL PRIMARY KEY,
-    "enabled" BOOLEAN DEFAULT (TRUE),
-    "name" TEXT UNIQUE
+    "enabled" BOOLEAN NOT NULL DEFAULT (TRUE),
+    "name" TEXT NOT NULL UNIQUE
 );
 
--- registry crate versions
+-- crate versions
 CREATE TABLE "crate_versions" (
     "id" BIGSERIAL PRIMARY KEY,
-    "crate" BIGINT REFERENCES crates(id) ON DELETE CASCADE,
-    "version" TEXT UNIQUE,
-    "checksum" TEXT,
-    "yanked" BOOLEAN,
-    "prerelease" BOOLEAN,
-    "download_url" TEXT
+    "crate" BIGINT NOT NULL REFERENCES crates(id) ON DELETE CASCADE,
+    "version" TEXT NOT NULL UNIQUE,
+    "checksum" TEXT NOT NULL,
+    "yanked" BOOLEAN NOT NULL
 );
 
--- build jobs that are running
+-- job stages
+CREATE TABLE job_stages(
+    "id" BIGSERIAL PRIMARY KEY,
+    "name" TEXT NOT NULL UNIQUE
+);
+
+INSERT INTO job_stages(name) VALUES ('fetch');
+INSERT INTO job_stages(name) VALUES ('build');
+INSERT INTO job_stages(name) VALUES ('upload');
+
+-- build jobs and their current status
 CREATE TABLE jobs(
     "id" BIGSERIAL PRIMARY KEY,
-    "uuid" UUID UNIQUE,
-    "builder" BIGINT REFERENCES builders(id) ON DELETE RESTRICT,
-    "target" BIGINT REFERENCES targets(id) ON DELETE RESTRICT,
-    "crate_version" BIGINT REFERENCES crate_versions(id) ON DELETE RESTRICT,
-    "started" BIGINT,
+    "uuid" UUID NOT NULL UNIQUE,
+    "builder" BIGINT NOT NULL REFERENCES builders(id) ON DELETE RESTRICT,
+    "target" BIGINT NOT NULL REFERENCES targets(id) ON DELETE RESTRICT,
+    "crate_version" BIGINT NOT NULL REFERENCES crate_versions(id) ON DELETE RESTRICT,
+    "started" BIGINT NOT NULL,
+    "timeout" BIGINT NOT NULL,
+    "stage" BIGINT NOT NULL REFERENCES job_stages(id) ON DELETE RESTRICT,
     "ended" BIGINT,
     "success" BOOLEAN
 );
 
--- log output from build job (json)
+-- jobs log output
 CREATE TABLE "job_logs" (
     "id" BIGSERIAL PRIMARY KEY,
-    "job" BIGINT REFERENCES jobs(id) ON DELETE CASCADE,
-    "data" TEXT
+    "job" BIGINT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    "stage" BIGINT NOT NULL REFERENCES job_stages(id) ON DELETE RESTRICT,
+    "line" TEXT NOT NULL
 );
 
 -- build job artifacts
 CREATE TABLE "job_artifacts" (
     "id" BIGSERIAL PRIMARY KEY,
-    "job" BIGINT REFERENCES jobs(id) ON DELETE CASCADE,
-    "name" TEXT,
-    "hash" TEXT,
-    "signature" TEXT,
-    "downloads" BIGINT
+    "job" BIGINT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    "name" TEXT NOT NULL,
+    "hash" TEXT NOT NULL,
+    "size" BIGINT NOT NULL,
+    "signature" TEXT NOT NULL,
+    "downloads" BIGINT NOT NULL DEFAULT (0)
 );
+
+CREATE VIEW "jobs_view" AS
+    SELECT
+        jobs.*,
+        targets.name AS target_name,
+        crate_versions.version AS crate_version_version
+    FROM jobs
+    JOIN builders
+        ON jobs.builder = builders.id
+    JOIN targets
+        ON jobs.target = targets.id
+    JOIN crate_versions
+        ON jobs.crate_version = crate_versions.id;
 
 CREATE VIEW "pubkey_fingerprints_view" AS
     SELECT
@@ -100,6 +127,18 @@ CREATE VIEW "builders_view" AS
     FROM builders
     JOIN pubkeys
         ON builders.pubkey = pubkeys.id;
+
+CREATE VIEW "builder_targets_view" AS
+    SELECT
+        builders.uuid AS builder_uuid,
+        builders.enabled AS builder_enabled,
+        builders.comment AS builder_comment,
+        targets.name AS target_name
+    FROM builder_targets
+    JOIN targets
+        ON builder_targets.target = targets.id
+    JOIN builders
+        ON builder_targets.builder = builders.id;
 
 -- view for registry versions
 CREATE VIEW crate_versions_view AS
@@ -125,5 +164,6 @@ CREATE VIEW build_queue AS
         FROM jobs
         WHERE crate_version = crate_versions.id
         AND target = targets.id
+        AND success IS NULL OR success = TRUE
     );
 

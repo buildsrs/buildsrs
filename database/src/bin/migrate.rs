@@ -41,11 +41,21 @@ pub enum BuilderCommand {
         #[clap(env)]
         public_key_file: PathBuf,
 
+        /// Set builder enabled.
         #[clap(long, env)]
         enabled: Option<bool>,
 
+        /// Set comment.
         #[clap(long, env)]
         comment: Option<String>,
+
+        /// Adds allowed target.
+        #[clap(long, env)]
+        target_add: Vec<String>,
+
+        /// Removes allowed target.
+        #[clap(long, env)]
+        target_remove: Vec<String>,
     },
     List,
 }
@@ -100,6 +110,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 public_key_file,
                 enabled,
                 comment,
+                target_add,
+                target_remove,
             } => {
                 let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
                 let builder = database
@@ -112,6 +124,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if let Some(comment) = comment {
                     transaction.builder_set_comment(builder, &comment).await?;
+                }
+
+                for target in &target_add {
+                    transaction.builder_target_add(builder, &target).await?;
+                }
+
+                for target in &target_remove {
+                    transaction.builder_target_remove(builder, &target).await?;
                 }
 
                 transaction.commit().await?;

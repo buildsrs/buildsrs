@@ -30,6 +30,20 @@ pub struct TargetInfo {
     pub enabled: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct CrateInfo {
+    pub name: String,
+    pub enabled: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct VersionInfo {
+    pub name: String,
+    pub version: String,
+    pub checksum: String,
+    pub yanked: bool,
+}
+
 statements!(
     /// Register new builder by SSH pubkey and comment.
     fn builder_register(uuid: Uuid, pubkey: i64) {
@@ -56,6 +70,23 @@ statements!(
         "UPDATE builders
         SET comment = $2
         WHERE uuid = $1"
+    }
+
+    /// Add an allowed target for a builder
+    fn builder_target_add(builder: Uuid, target: &str) {
+        "INSERT INTO builder_targets(builder, target)
+        VALUES (
+            (SELECT id FROM builders WHERE uuid = $1),
+            (SELECT id FROM targets WHERE name = $2)
+        )
+        ON CONFLICT DO NOTHING"
+    }
+
+    /// Remove an allowed target for a builder
+    fn builder_target_remove(builder: Uuid, target: &str) {
+        "DELETE FROM builder_targets
+        WHERE builder = (SELECT id FROM builders WHERE uuid = $1)
+        AND target = (SELECT id FROM targets WHERE name = $2)"
     }
 
     fn builder_remove(fingerprint: &str) {
@@ -89,6 +120,23 @@ statements!(
         ON CONFLICT (version) DO UPDATE SET yanked = $4"
     }
 
+    /// Set the job's current stage.
+    fn job_stage(job: Uuid, stage: &str) {
+        "UPDATE jobs
+        SET stage = (SELECT id FROM job_stages WHERE name = $2)
+        WHERE uuid = $1"
+    }
+
+    /// Add a log message for the job.
+    fn job_log(job: Uuid, line: &str) {
+        "INSERT INTO job_logs(job, stage, line)
+        VALUES (
+            (SELECT id FROM jobs WHERE uuid = $1),
+            (SELECT stage FROM jobs WHERE uuid = $1),
+            $2
+        )"
+    }
+
     let builder_by_fingerprint = "
         SELECT uuid
         FROM builders
@@ -108,6 +156,12 @@ statements!(
         FROM builders
     ";
 
+    let builder_targets = "
+        SELECT target_name
+        FROM builder_targets_view
+        WHERE builder_uuid = $1
+    ";
+
     let target_list = "
         SELECT name
         FROM targets
@@ -119,6 +173,11 @@ statements!(
         WHERE name = $1
     ";
 
+    let crate_info = "
+        SELECT *
+        FROM crates
+        WHERE name = $1
+    ";
     let crate_versions = "
         SELECT version
         FROM crate_versions_view
@@ -201,6 +260,14 @@ impl<T: GenericClient> Database<T> {
         rows.into_iter().map(|row| row.try_get("uuid")).collect()
     }
 
+    pub async fn builder_targets(&self, builder: Uuid) -> Result<Vec<String>, Error> {
+        let rows = self
+            .connection
+            .query(&self.statements.builder_targets, &[&builder])
+            .await?;
+        rows.into_iter().map(|row| row.try_get("target_name")).collect()
+    }
+
     pub async fn target_list(&self) -> Result<Vec<String>, Error> {
         let rows = self
             .connection
@@ -217,6 +284,53 @@ impl<T: GenericClient> Database<T> {
         Ok(TargetInfo {
             name: row.try_get("name")?,
             enabled: row.try_get("target_enabled")?,
+        })
+    }
+
+    pub async fn job_request(&self, builder: Uuid, target: &str) -> Result<Uuid, Error> {
+        todo!()
+    }
+
+    pub async fn job_info(&self, job: Uuid) -> Result<(), Error> {
+        todo!()
+    }
+
+    pub async fn job_list(&self, builder: Option<Uuid>, target: Option<&str>, active: Option<bool>) -> Result<Vec<Uuid>, Error> {
+        todo!()
+    }
+
+    /// Get info on a crate
+    pub async fn crate_info(&self, name: &str) -> Result<CrateInfo, Error> {
+        let info = self
+            .connection
+            .query_one(&self.statements.crate_info, &[&name])
+            .await?;
+        Ok(CrateInfo {
+            name: info.try_get("name")?,
+            enabled: info.try_get("enabled")?,
+        })
+    }
+
+    /// Get a list of versions for a crate
+    pub async fn crate_versions(&self, name: &str) -> Result<Vec<String>, Error> {
+        let rows = self
+            .connection
+            .query(&self.statements.crate_versions, &[&name])
+            .await?;
+        rows.into_iter().map(|row| row.try_get("version")).collect()
+    }
+
+    /// Get info on a crate version
+    pub async fn version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error> {
+        let info = self
+            .connection
+            .query_one(&self.statements.version_info, &[&name, &version])
+            .await?;
+        Ok(VersionInfo {
+            name: info.try_get("name")?,
+            version: info.try_get("version")?,
+            checksum: info.try_get("checksum")?,
+            yanked: info.try_get("yanked")?,
         })
     }
 }
