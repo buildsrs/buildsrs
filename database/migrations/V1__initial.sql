@@ -16,8 +16,7 @@ CREATE TABLE "builders" (
     "uuid" UUID NOT NULL UNIQUE,
     "pubkey" BIGINT NOT NULL REFERENCES pubkeys(id) ON DELETE RESTRICT,
     "enabled" BOOLEAN NOT NULL DEFAULT (FALSE),
-    "connected" BOOLEAN NOT NULL DEFAULT (FALSE),
-    "last" BIGINT,
+    "heartbeat" BIGINT,
     "comment" TEXT
 );
 
@@ -130,9 +129,11 @@ CREATE VIEW "builders_view" AS
 
 CREATE VIEW "builder_targets_view" AS
     SELECT
+        builders.id AS builder,
         builders.uuid AS builder_uuid,
         builders.enabled AS builder_enabled,
         builders.comment AS builder_comment,
+        targets.id AS target,
         targets.name AS target_name
     FROM builder_targets
     JOIN targets

@@ -44,6 +44,15 @@ pub struct VersionInfo {
     pub yanked: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct JobInfo {
+    pub uuid: Uuid,
+    pub builder: Uuid,
+    pub name: String,
+    pub version: String,
+    pub target: String,
+}
+
 statements!(
     /// Register new builder by SSH pubkey and comment.
     fn builder_register(uuid: Uuid, pubkey: i64) {
@@ -187,28 +196,29 @@ statements!(
         FROM crates
         WHERE name = $1
     ";
+
     let crate_versions = "
         SELECT version
         FROM crate_versions_view
         WHERE name = $1
     ";
+
     let version_info = "
         SELECT *
         FROM crate_versions_view
         WHERE name = $1
         AND version = $2
     ";
+
     let job_create = "
         INSERT INTO jobs(builder, target, crate_version)
         VALUES (
-            $1,
-            $2,
+            (SELECT id FROM builders WHERE uuid = $1),
+            (SELECT target FROM builder_targets_view),
             (SELECT version_id FROM build_queue WHERE target = $2)
         )
-        RETURNING (id)
+        RETURNING (uuid)
     ";
-    let crate_list = "SELECT 1";
-    let crate_query = "SELECT 1";
 
     let pubkey_add = "
         INSERT INTO pubkeys (encoded)
@@ -295,7 +305,11 @@ impl<T: GenericClient> Database<T> {
     }
 
     pub async fn job_request(&self, builder: Uuid, target: &str) -> Result<Uuid, Error> {
-        todo!()
+        let row = self
+            .connection
+            .query_one(&self.statements.job_create, &[&builder, &target])
+            .await?;
+        Ok(row.try_get("uuid")?)
     }
 
     pub async fn job_info(&self, job: Uuid) -> Result<(), Error> {
