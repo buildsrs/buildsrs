@@ -141,7 +141,7 @@ CREATE VIEW "builder_targets_view" AS
         ON builder_targets.builder = builders.id;
 
 -- view for registry versions
-CREATE VIEW crate_versions_view AS
+CREATE VIEW "crate_versions_view" AS
     SELECT
         crates.name,
         crate_versions.*
@@ -150,7 +150,7 @@ CREATE VIEW crate_versions_view AS
         ON crates.id = crate_versions.crate;
 
 -- build queue: per-target list of crate versions that we have not built yet.
-CREATE VIEW build_queue AS
+CREATE VIEW "build_queue" AS
     SELECT
         targets.id AS target,
         targets.name AS target_name,

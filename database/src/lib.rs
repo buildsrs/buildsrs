@@ -1,6 +1,6 @@
 use futures::{Stream, StreamExt};
 use ssh_key::{HashAlg, PublicKey};
-use std::{pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc, collections::BTreeSet};
 use tokio::select;
 pub use tokio_postgres::Error;
 use tokio_postgres::{
@@ -89,10 +89,6 @@ statements!(
         AND target = (SELECT id FROM targets WHERE name = $2)"
     }
 
-    fn builder_remove(fingerprint: &str) {
-        "SELECT 1"
-    }
-
     /// Request a job for a builder.
     fn builder_request(builder: Uuid, target: &str) {
         "SELECT 1"
@@ -102,6 +98,19 @@ statements!(
     fn target_add(name: &str) {
         "INSERT INTO targets(name) VALUES ($1)
         ON CONFLICT DO NOTHING"
+    }
+
+    /// Remove a target
+    fn target_remove(name: &str) {
+        "DELETE FROM targets
+        WHERE name = $1"
+    }
+
+    /// Set target enabled or disabled
+    fn target_enabled(name: &str, enabled: bool) {
+        "UPDATE targets
+        SET enabled = $2
+        WHERE name = $1"
     }
 
     /// Add a crate to the database.
@@ -184,12 +193,10 @@ statements!(
         WHERE name = $1
     ";
     let version_info = "
-        SELECT
-            yanked
+        SELECT *
         FROM crate_versions_view
-        WHERE
-            name = $1
-            AND version = $2
+        WHERE name = $1
+        AND version = $2
     ";
     let job_create = "
         INSERT INTO jobs(builder, target, crate_version)
@@ -260,7 +267,7 @@ impl<T: GenericClient> Database<T> {
         rows.into_iter().map(|row| row.try_get("uuid")).collect()
     }
 
-    pub async fn builder_targets(&self, builder: Uuid) -> Result<Vec<String>, Error> {
+    pub async fn builder_targets(&self, builder: Uuid) -> Result<BTreeSet<String>, Error> {
         let rows = self
             .connection
             .query(&self.statements.builder_targets, &[&builder])
@@ -268,7 +275,7 @@ impl<T: GenericClient> Database<T> {
         rows.into_iter().map(|row| row.try_get("target_name")).collect()
     }
 
-    pub async fn target_list(&self) -> Result<Vec<String>, Error> {
+    pub async fn target_list(&self) -> Result<BTreeSet<String>, Error> {
         let rows = self
             .connection
             .query(&self.statements.target_list, &[])
@@ -283,7 +290,7 @@ impl<T: GenericClient> Database<T> {
             .await?;
         Ok(TargetInfo {
             name: row.try_get("name")?,
-            enabled: row.try_get("target_enabled")?,
+            enabled: row.try_get("enabled")?,
         })
     }
 
@@ -321,7 +328,7 @@ impl<T: GenericClient> Database<T> {
     }
 
     /// Get info on a crate version
-    pub async fn version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error> {
+    pub async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error> {
         let info = self
             .connection
             .query_one(&self.statements.version_info, &[&name, &version])

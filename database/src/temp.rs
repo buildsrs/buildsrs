@@ -34,8 +34,8 @@ impl TempDatabase {
 
         // create new, empty, random database
         let database_name = format!("test_{}", random_database_name(15));
-        println!("Creating database {database_name}");
-        println!("Run `just database-repl {database_name}` to inspect database");
+        println!("=> Creating database {database_name:?}");
+        println!("=> Run `just database-repl {database_name:?}` to inspect database");
         outer_client
             .execute(&format!("CREATE DATABASE {database_name}"), &[])
             .await?;
