@@ -1,76 +1,37 @@
 # builds.rs
 
-Project to provide builds for all binary crates on [crates.io][].
+[![pipeline status](https://gitlab.com/buildsrs/buildsrs/badges/main/pipeline.svg)](https://gitlab.com/buildsrs/buildsrs/-/pipelines)
+
+Automated build system for all binary Rust crates on
+[crates.io](https://crates.io).
+
+The Rust community has built some incredible tools, but some of these are not
+as accessible because the authors might not provide builds for them for all
+relevant platforms, or because they require to be built from source.
 
 The goal for this project is to make it easy to use Rust tools and applications
 in the field by providing a convenient service to build binaries for multiple
-platforms and architectures. The entire stack itself is written in Rust and is
-open source to encourage contribution.
+platforms and architectures. 
 
-## Architecture
+This project itself is written in Rust and is open source to encourage
+contribution.
 
-```mermaid
-graph BT
-    Storage[fa:fa-database Wasabi S3\nbuilds-production]
-    Frontend[fa:fa-globe Frontend\nbuilds.rs]
-    Frontend -->|HTTPS| Storage
-    Frontend -->|HTTPS| Proxy
-    subgraph Deployment
-        direction BT
-        Database[fa:fa-database Postgres Database]
-        Backend[fa:fa-server builds.rs Backend]
-        Backend  -->|SQL| Database
-        Sync[fa:fa-download Registry Sync] -->|SQL| Database
-        Proxy[fa:fa-globe Cloudflare CDN\napi.builds.rs] -->|HTTPS| Backend
-        Builder[fa:fa-vial Builder] -->|WebSocket| Backend
-    end
-    Backend  -->|HTTP| Storage
-```
+## Status
 
-- It is mostly monolithic and has one central backend component. This component
-  schedules crates being built and offere the APIs for this and the frontend.
-  It may be replicated as needed.
-- Uses a [Postgres][postgres] database to store metadata. This is relatively
-  low-traffic, as it is only written to when crates are published or builds are
-  started or finished. We expect less than 5 transactions per second.
-- The registry sync component continuously monitors the [crates.io index][] and
-  communicates changes to the database.  This is an external service because it
-  only needs to run once.
-- The builder is a component that fetches jobs from the backend, builds them
-  using [Docker][docker], and pushes the resulting binaries back into the backend. This
-  can be replicated as needed for parallel building.
-- Storage is being handled by a public [Wasabi][wasabi] bucket.
-- We are considering adding search to this using [Meilisearch][meilisearch] or
-  [Qdrant][qdrant].
+This project is still under heavy development. We are currently aiming to get
+the project into a deployed alpha state as soon as we can so that we can
+collect some data and feedback.
 
-## Development
+## Getting Started
 
-Prerequisites:
+Documentation is still in the process of being written. 
 
-- [Rustup][rustup]
-- [Just][just]
-- [Trunk][trunk]
-- [Docker][docker]
+Check out the [Development guide](docs/guides/development.md) for information
+on how to get started developing this project.
 
-Tests:
-
-    just database
-    just database-cli migrate
-    just test
-
-For more information, check the `README.md` files in the respective subcrates.
+The [Architecture overview](docs/guides/architecture.md) has important context
+for how this project is currently organized in terms of services and code.
 
 ## License
 
 [MIT](LICENSE.md).
-
-[postgres]: https://www.postgresql.org/
-[crates.io index]: https://github.com/rust-lang/crates.io-index
-[crates.io]: https://crates.io/
-[docker]: https://docs.docker.com/engine/install/
-[rustup]: https://rustup.rs/
-[just]: https://github.com/casey/just
-[trunk]: https://trunkrs.dev/
-[wasabi]: https://wasabi.com/
-[meilisearch]: https://www.meilisearch.com/
-[qdrant]: https://qdrant.tech/
