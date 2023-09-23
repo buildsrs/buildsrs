@@ -58,7 +58,10 @@ async fn can_add_crate_version() {
         let name = "serde";
         let version = "0.1.0";
         database.crate_add(name).await.unwrap();
-        database.crate_version_add(name, version, "abcdef", false).await.unwrap();
+        database
+            .crate_version_add(name, version, "abcdef", false)
+            .await
+            .unwrap();
         let info = database.crate_version_info(name, version).await.unwrap();
         assert_eq!(info.name, name);
         assert_eq!(info.version, version);
@@ -74,10 +77,16 @@ async fn can_yank_crate_version() {
         let name = "serde";
         let version = "0.1.0";
         database.crate_add(name).await.unwrap();
-        database.crate_version_add(name, version, "abcdef", false).await.unwrap();
+        database
+            .crate_version_add(name, version, "abcdef", false)
+            .await
+            .unwrap();
 
         for yanked in [true, false] {
-            database.crate_version_add(name, version, "abcdef", yanked).await.unwrap();
+            database
+                .crate_version_add(name, version, "abcdef", yanked)
+                .await
+                .unwrap();
             let info = database.crate_version_info(name, version).await.unwrap();
             assert_eq!(info.yanked, yanked);
         }
@@ -324,6 +333,63 @@ async fn can_target_remove() {
         database.target_remove(targets[0]).await.unwrap();
         let list = database.target_list().await.unwrap();
         assert!(!list.contains(targets[0]));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn can_target_rename() {
+    with_database(|mut database: Database| async move {
+        let target_original = "x86_64-unknown";
+        let target_renamed = "x86_64-unknown-unknown";
+        database.target_add(target_original).await.unwrap();
+        database
+            .target_rename(target_original, target_renamed)
+            .await
+            .unwrap();
+        let info = database.target_info(target_renamed).await.unwrap();
+        assert_eq!(info.name, target_renamed);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn can_job_create() {
+    with_database(|mut database: Database| async move {
+        // add target
+        let target = "x86_64-unknown-unknown";
+        database.target_add(target).await.unwrap();
+
+        // add crate and version
+        let name = "serde";
+        let version = "0.1.0";
+        database.crate_add(name).await.unwrap();
+        database
+            .crate_version_add(name, version, "abcdef", false)
+            .await
+            .unwrap();
+
+        // add builder
+        let private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519).unwrap();
+        let builder = Uuid::new_v4();
+        let transaction = database.transaction().await.unwrap();
+        transaction
+            .builder_add(builder, &private_key.public_key(), "comment")
+            .await
+            .unwrap();
+        transaction.commit().await.unwrap();
+        database.builder_target_add(builder, target).await.unwrap();
+
+        // add job
+        let job = database.job_request(builder, target).await.unwrap();
+
+        // get job info
+        let info = database.job_info(job).await.unwrap();
+
+        assert_eq!(info.builder, builder);
+        assert_eq!(info.target, target);
+        assert_eq!(info.name, name);
+        assert_eq!(info.version, version);
     })
     .await;
 }

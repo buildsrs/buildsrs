@@ -1,11 +1,9 @@
 use futures::{Stream, StreamExt};
 use ssh_key::{HashAlg, PublicKey};
-use std::{pin::Pin, sync::Arc, collections::BTreeSet};
+use std::{collections::BTreeSet, pin::Pin, sync::Arc};
 use tokio::select;
-pub use tokio_postgres::Error;
-use tokio_postgres::{
-    connect, types::Json, AsyncMessage, Client, GenericClient, NoTls, Statement, Transaction,
-};
+use tokio_postgres::{connect, types::Json, AsyncMessage, Client, GenericClient, NoTls, Statement};
+pub use tokio_postgres::{Error, Transaction};
 use uuid::Uuid;
 
 #[macro_use]
@@ -122,6 +120,13 @@ statements!(
         WHERE name = $1"
     }
 
+    /// Set target enabled or disabled
+    fn target_rename(target: &str, name: &str) {
+        "UPDATE targets
+        SET name = $2
+        WHERE name = $1"
+    }
+
     /// Add a crate to the database.
     fn crate_add(name: &str) {
         "INSERT INTO crates(name) VALUES ($1)
@@ -211,13 +216,23 @@ statements!(
     ";
 
     let job_create = "
-        INSERT INTO jobs(builder, target, crate_version)
+        INSERT INTO jobs(uuid, builder, target, crate_version, stage)
         VALUES (
+            $3,
             (SELECT id FROM builders WHERE uuid = $1),
-            (SELECT target FROM builder_targets_view),
-            (SELECT version_id FROM build_queue WHERE target = $2)
+            (SELECT target FROM builder_targets_view
+                WHERE builder_uuid = $1
+                AND target_name = $2),
+            (SELECT version_id FROM build_queue WHERE target_name = $2),
+            (SELECT id FROM job_stages WHERE name = 'init')
         )
         RETURNING (uuid)
+    ";
+
+    let job_info = "
+        SELECT *
+        FROM jobs_view
+        WHERE uuid = $1
     ";
 
     let pubkey_add = "
@@ -282,7 +297,9 @@ impl<T: GenericClient> Database<T> {
             .connection
             .query(&self.statements.builder_targets, &[&builder])
             .await?;
-        rows.into_iter().map(|row| row.try_get("target_name")).collect()
+        rows.into_iter()
+            .map(|row| row.try_get("target_name"))
+            .collect()
     }
 
     pub async fn target_list(&self) -> Result<BTreeSet<String>, Error> {
@@ -307,16 +324,34 @@ impl<T: GenericClient> Database<T> {
     pub async fn job_request(&self, builder: Uuid, target: &str) -> Result<Uuid, Error> {
         let row = self
             .connection
-            .query_one(&self.statements.job_create, &[&builder, &target])
+            .query_one(
+                &self.statements.job_create,
+                &[&builder, &target, &Uuid::new_v4()],
+            )
             .await?;
         Ok(row.try_get("uuid")?)
     }
 
-    pub async fn job_info(&self, job: Uuid) -> Result<(), Error> {
-        todo!()
+    pub async fn job_info(&self, job: Uuid) -> Result<JobInfo, Error> {
+        let row = self
+            .connection
+            .query_one(&self.statements.job_info, &[&job])
+            .await?;
+        Ok(JobInfo {
+            uuid: row.try_get("uuid")?,
+            version: row.try_get("crate_version_version")?,
+            name: row.try_get("crate_name")?,
+            builder: row.try_get("builder_uuid")?,
+            target: row.try_get("target_name")?,
+        })
     }
 
-    pub async fn job_list(&self, builder: Option<Uuid>, target: Option<&str>, active: Option<bool>) -> Result<Vec<Uuid>, Error> {
+    pub async fn job_list(
+        &self,
+        builder: Option<Uuid>,
+        target: Option<&str>,
+        active: Option<bool>,
+    ) -> Result<Vec<Uuid>, Error> {
         todo!()
     }
 
@@ -342,7 +377,11 @@ impl<T: GenericClient> Database<T> {
     }
 
     /// Get info on a crate version
-    pub async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error> {
+    pub async fn crate_version_info(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<VersionInfo, Error> {
         let info = self
             .connection
             .query_one(&self.statements.version_info, &[&name, &version])

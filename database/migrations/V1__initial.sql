@@ -56,6 +56,7 @@ CREATE TABLE job_stages(
     "name" TEXT NOT NULL UNIQUE
 );
 
+INSERT INTO job_stages(name) VALUES ('init');
 INSERT INTO job_stages(name) VALUES ('fetch');
 INSERT INTO job_stages(name) VALUES ('build');
 INSERT INTO job_stages(name) VALUES ('upload');
@@ -67,8 +68,8 @@ CREATE TABLE jobs(
     "builder" BIGINT NOT NULL REFERENCES builders(id) ON DELETE RESTRICT,
     "target" BIGINT NOT NULL REFERENCES targets(id) ON DELETE RESTRICT,
     "crate_version" BIGINT NOT NULL REFERENCES crate_versions(id) ON DELETE RESTRICT,
-    "started" BIGINT NOT NULL,
-    "timeout" BIGINT NOT NULL,
+    "started" BIGINT NOT NULL DEFAULT (0),
+    "timeout" BIGINT NOT NULL DEFAULT (0),
     "stage" BIGINT NOT NULL REFERENCES job_stages(id) ON DELETE RESTRICT,
     "ended" BIGINT,
     "success" BOOLEAN
@@ -93,10 +94,20 @@ CREATE TABLE "job_artifacts" (
     "downloads" BIGINT NOT NULL DEFAULT (0)
 );
 
+-- track downloads per artifact
+CREATE TABLE "job_artifact_downloads" (
+    "artifact" BIGINT NOT NULL REFERENCES job_artifacts(id) ON DELETE CASCADE,
+    "date" BIGINT,
+    "downloads" BIGINT,
+    PRIMARY KEY ("artifact", "date")
+);
+
 CREATE VIEW "jobs_view" AS
     SELECT
         jobs.*,
         targets.name AS target_name,
+        builders.uuid AS builder_uuid,
+        crates.name AS crate_name,
         crate_versions.version AS crate_version_version
     FROM jobs
     JOIN builders
@@ -104,7 +115,9 @@ CREATE VIEW "jobs_view" AS
     JOIN targets
         ON jobs.target = targets.id
     JOIN crate_versions
-        ON jobs.crate_version = crate_versions.id;
+        ON jobs.crate_version = crate_versions.id
+    JOIN crates
+        ON crate_versions.crate = crates.id;
 
 CREATE VIEW "pubkey_fingerprints_view" AS
     SELECT

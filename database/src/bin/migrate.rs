@@ -1,4 +1,4 @@
-use buildsrs_database::{migrations, Database};
+use buildsrs_database::{migrations, Database, Error, Transaction};
 use clap::Parser;
 use ssh_key::{HashAlg, PublicKey};
 use std::path::PathBuf;
@@ -72,16 +72,103 @@ pub enum TargetCommand {
 
         #[clap(long, env)]
         enabled: Option<bool>,
+
+        #[clap(long, env)]
+        rename: Option<String>,
     },
     List,
 }
 
+impl Command {
+    async fn apply(
+        &self,
+        database: &mut Database<Transaction<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match self {
+            Command::Migrate => unreachable!(),
+            Command::Builder { command } => match command {
+                BuilderCommand::Add {
+                    public_key_file,
+                    comment,
+                } => {
+                    let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
+                    database.builder_add(Uuid::new_v4(), &key, &comment).await?;
+                }
+                BuilderCommand::Edit {
+                    public_key_file,
+                    enabled,
+                    comment,
+                    target_add,
+                    target_remove,
+                } => {
+                    let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
+                    let builder = database
+                        .builder_lookup(&key.fingerprint(HashAlg::Sha512).to_string())
+                        .await?;
+                    if let Some(enabled) = enabled {
+                        database.builder_set_enabled(builder, *enabled).await?;
+                    }
+
+                    if let Some(comment) = comment {
+                        database.builder_set_comment(builder, &comment).await?;
+                    }
+
+                    for target in target_add {
+                        database.builder_target_add(builder, &target).await?;
+                    }
+
+                    for target in target_remove {
+                        database.builder_target_remove(builder, &target).await?;
+                    }
+                }
+                BuilderCommand::List => {
+                    let builders = database.builder_list().await?;
+                    for builder in &builders {
+                        let info = database.builder_get(*builder).await?;
+                        println!("{info:#?}");
+                    }
+                }
+            },
+            Command::Target { command } => match command {
+                TargetCommand::Add { target } => {
+                    database.target_add(&target).await?;
+                }
+                TargetCommand::Edit {
+                    target,
+                    enabled,
+                    rename,
+                } => {
+                    if let Some(enabled) = enabled {
+                        database.target_enabled(&target, *enabled).await?;
+                    }
+
+                    if let Some(rename) = rename {
+                        database.target_rename(&target, &rename).await?;
+                    }
+                }
+                TargetCommand::List => {
+                    for target in &database.target_list().await? {
+                        let info = database.target_info(&target).await?;
+                        println!("{target:#?}");
+                    }
+                }
+            },
+        }
+
+        Ok(())
+    }
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // parse command-line options
     let options = Options::parse();
+
+    // connect to database
     let (mut client, connection) = connect(&options.database, NoTls).await.unwrap();
     tokio::spawn(connection);
 
+    // handle migration
     match options.command {
         Command::Migrate => {
             migrations::runner().run_async(&mut client).await?;
@@ -90,75 +177,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {}
     }
 
+    // create database handle, run command
     let mut database = Database::new(client).await?;
-
-    match options.command {
-        Command::Migrate => unreachable!(),
-        Command::Builder { command } => match command {
-            BuilderCommand::Add {
-                public_key_file,
-                comment,
-            } => {
-                let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
-                let transaction = database.transaction().await?;
-                transaction
-                    .builder_add(Uuid::new_v4(), &key, &comment)
-                    .await?;
-                transaction.commit().await?;
-            }
-            BuilderCommand::Edit {
-                public_key_file,
-                enabled,
-                comment,
-                target_add,
-                target_remove,
-            } => {
-                let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
-                let builder = database
-                    .builder_lookup(&key.fingerprint(HashAlg::Sha512).to_string())
-                    .await?;
-                let transaction = database.transaction().await?;
-                if let Some(enabled) = enabled {
-                    transaction.builder_set_enabled(builder, enabled).await?;
-                }
-
-                if let Some(comment) = comment {
-                    transaction.builder_set_comment(builder, &comment).await?;
-                }
-
-                for target in &target_add {
-                    transaction.builder_target_add(builder, &target).await?;
-                }
-
-                for target in &target_remove {
-                    transaction.builder_target_remove(builder, &target).await?;
-                }
-
-                transaction.commit().await?;
-            }
-            BuilderCommand::List => {
-                let transaction = database.transaction().await?;
-                let builders = transaction.builder_list().await?;
-                for builder in &builders {
-                    let info = transaction.builder_get(*builder).await?;
-                    println!("{info:#?}");
-                }
-            }
-        },
-        Command::Target { command } => match command {
-            TargetCommand::Add { target } => {
-                database.target_add(&target).await?;
-            }
-            TargetCommand::Edit { target, enabled } => {}
-            TargetCommand::List => {
-                let transaction = database.transaction().await?;
-                for target in &transaction.target_list().await? {
-                    let info = transaction.target_info(&target).await?;
-                    println!("{target:#?}");
-                }
-            }
-        },
-    }
+    let mut database = database.transaction().await?;
+    options.command.apply(&mut database).await?;
+    database.commit().await?;
 
     Ok(())
 }
