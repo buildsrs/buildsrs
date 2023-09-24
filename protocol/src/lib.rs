@@ -3,24 +3,27 @@ use serde::{Deserialize, Serialize};
 pub use ssh_key;
 use ssh_key::{Fingerprint, HashAlg, PrivateKey, PublicKey, SshSig};
 use url::Url;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ServerMessage {
     ChallengeRequest(Bytes),
     JobResponse(Job),
+    JobList(Vec<Job>),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct JobRequest {
-    pub arch: String,
+    pub target: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Job {
-    pub arch: String,
-    pub crate_name: String,
-    pub crate_version: String,
-    pub crate_url: Url,
+    pub uuid: Uuid,
+    pub target: String,
+    pub name: String,
+    pub version: String,
+    pub download: Url,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

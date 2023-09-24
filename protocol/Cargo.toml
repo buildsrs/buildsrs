@@ -10,6 +10,7 @@ serde_json = "1.0.107"
 ssh-key = { version = "0.6.1", features = ["ed25519", "serde"] }
 thiserror = "1.0.48"
 url = { version = "2.4.0", features = ["serde"] }
+uuid = { version = "1.4.1", features = ["serde"] }
 
 [dev-dependencies]
 rand_core = { version = "0.6.4", features = ["getrandom"] }

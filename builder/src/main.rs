@@ -7,47 +7,82 @@ use ssh_key::{HashAlg, PrivateKey};
 use std::path::PathBuf;
 use tokio::{
     net::TcpStream,
+    select,
     sync::mpsc::{channel, Receiver, Sender},
+    task::JoinSet,
     time::timeout,
 };
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
 use tracing::*;
 use url::Url;
 
+/// Default WebSocket endpoint.
+const DEFAULT_WEBSOCKET: &str = "wss://api.builds.rs/api/v1/jobs";
+
 #[derive(Parser, Debug, Clone)]
 pub struct Options {
+    /// Path to SSH private key.
+    ///
+    /// SSH private key is used for authentication and for artifact signing.
     #[clap(long, short, env)]
     pub private_key_file: PathBuf,
 
-    #[clap(long, short, env)]
+    /// WebSocket endpoint to connect to.
+    #[clap(long, short, env, default_value = DEFAULT_WEBSOCKET)]
     pub websocket: Url,
 
+    /// Timeout for connection to backend.
     #[clap(long, env, default_value = "1m")]
     pub timeout_connect: DurationString,
 
+    /// Timeout for authentication with backend.
     #[clap(long, env, default_value = "1m")]
     pub timeout_authenticate: DurationString,
+
+    /// Job many jobs to run in parallel.
+    #[clap(long, env, default_value = "1")]
+    pub parallel: usize,
 }
 
+/// WebSocket connection type alias.
+type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
 pub struct Connection {
+    /// Private key, used for authentication and artifact signing.
     private_key: PrivateKey,
-    websocket: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    /// WebSocket connection.
+    websocket: WebSocket,
+    /// List of currently running jobs.
+    tasks: JoinSet<()>,
+    /// Event receiver.
     receiver: Receiver<()>,
+    /// Backlog of jobs, if there are more than can fit.
+    backlog: Vec<Job>,
+    /// Sender of events.
     sender: Sender<()>,
 }
 
 impl Connection {
+    /// Connect to WebSocket endpoint.
     pub async fn connect(private_key: PrivateKey, url: &Url) -> Result<Self> {
         let (websocket, _) = connect_async(url.as_str()).await?;
-        let (sender, receiver) = channel(16);
-        Ok(Self {
-            private_key,
-            websocket,
-            receiver,
-            sender,
-        })
+        Ok(Self::new(websocket, private_key))
     }
 
+    /// Create new connection.
+    pub fn new(websocket: WebSocket, private_key: PrivateKey) -> Self {
+        let (sender, receiver) = channel(16);
+        Self {
+            private_key,
+            websocket,
+            sender,
+            receiver,
+            tasks: Default::default(),
+            backlog: Default::default(),
+        }
+    }
+
+    /// Send a signed ClientMessage.
     pub async fn send(&mut self, message: ClientMessage) -> Result<()> {
         let signed = SignedMessage::new(&self.private_key, message)?;
         let json = serde_json::to_string(&signed)?;
@@ -55,6 +90,17 @@ impl Connection {
         Ok(())
     }
 
+    /// Receive a ServerMessage.
+    pub async fn recv(websocket: &mut WebSocket) -> Result<ServerMessage> {
+        loop {
+            match websocket.next().await {
+                Some(Ok(Message::Text(text))) => todo!(),
+                _ => todo!(),
+            }
+        }
+    }
+
+    /// Authenticate to server.
     pub async fn authenticate(&mut self) -> Result<()> {
         let fingerprint = self.private_key.public_key().fingerprint(HashAlg::Sha512);
         self.send(ClientMessage::Hello(fingerprint)).await?;
@@ -74,6 +120,29 @@ impl Connection {
             .await?;
         Ok(())
     }
+
+    /// Synchronize tasks with server.
+    pub async fn tasks_sync(&mut self) -> Result<()> {
+        // TODO: implement tasks sync
+        Ok(())
+    }
+
+    /// Handle a single iteration.
+    pub async fn handle_iter(&mut self) -> Result<()> {
+        select! {
+            message = Self::recv(&mut self.websocket) => {},
+            result = self.tasks.join_next() => {},
+            event = self.receiver.recv() => {},
+        }
+        Ok(())
+    }
+
+    /// Handle messages and events.
+    pub async fn handle(&mut self) -> Result<()> {
+        loop {
+            self.handle_iter().await?;
+        }
+    }
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -88,10 +157,7 @@ async fn main() -> Result<()> {
         private_key.fingerprint(HashAlg::Sha512)
     );
 
-    debug!(
-        "Connecting to WebSocket, timeout {}",
-        options.timeout_connect
-    );
+    debug!("Connecting to WebSocket");
     let mut connection = timeout(
         options.timeout_connect.into(),
         Connection::connect(private_key, &options.websocket),
@@ -99,16 +165,19 @@ async fn main() -> Result<()> {
     .await??;
     info!("Connected to {}", options.websocket);
 
-    debug!(
-        "Authenticating with WebSocket, timeout {}",
-        options.timeout_authenticate
-    );
+    debug!("Authenticating with WebSocket",);
     timeout(
         options.timeout_authenticate.into(),
         connection.authenticate(),
     )
     .await??;
     info!("Authenticated with WebSocket");
+
+    debug!("Synchronizing task list");
+    connection.tasks_sync().await?;
+
+    debug!("Handling events");
+    connection.handle().await?;
 
     Ok(())
 }
