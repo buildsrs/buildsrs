@@ -42,10 +42,50 @@ pub struct Options {
     /// Job many jobs to run in parallel.
     #[clap(long, env, default_value = "1")]
     pub parallel: usize,
+
+    /// Target this builder will build.
+    #[clap(long, env, default_value = "x86_86-unknown-linux-gnu")]
+    pub target: String,
+}
+
+#[derive(Parser, Debug, Clone)]
+pub enum Command {
+    Build(BuildCommand),
+    Connect(ConnectCommand),
+}
+
+/// Build a single crate.
+#[derive(Parser, Debug, Clone)]
+pub struct BuildCommand {
+    #[clap(long = "crate")]
+    pub krate: Url,
+}
+
+/// Connect to backend to service jobs.
+#[derive(Parser, Debug, Clone)]
+pub struct ConnectCommand {
+    /// WebSocket endpoint to connect to.
+    #[clap(long, short, env, default_value = DEFAULT_WEBSOCKET)]
+    pub websocket: Url,
+
+    /// Timeout for connection to backend.
+    #[clap(long, env, default_value = "1m")]
+    pub timeout_connect: DurationString,
+
+    /// Timeout for authentication with backend.
+    #[clap(long, env, default_value = "1m")]
+    pub timeout_authenticate: DurationString,
+
+    /// Job many jobs to run in parallel.
+    #[clap(long, env, default_value = "1")]
+    pub parallel: usize,
 }
 
 /// WebSocket connection type alias.
 type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
+
+pub enum Event {
+}
 
 pub struct Connection {
     /// Private key, used for authentication and artifact signing.
@@ -55,11 +95,11 @@ pub struct Connection {
     /// List of currently running jobs.
     tasks: JoinSet<()>,
     /// Event receiver.
-    receiver: Receiver<()>,
+    receiver: Receiver<Event>,
     /// Backlog of jobs, if there are more than can fit.
     backlog: Vec<Job>,
     /// Sender of events.
-    sender: Sender<()>,
+    sender: Sender<Event>,
 }
 
 impl Connection {
@@ -130,8 +170,8 @@ impl Connection {
     /// Handle a single iteration.
     pub async fn handle_iter(&mut self) -> Result<()> {
         select! {
-            message = Self::recv(&mut self.websocket) => {},
-            result = self.tasks.join_next() => {},
+            message = Self::recv(&mut self.websocket) => self.handle_message(message?),
+            result = self.tasks.join_next() => self.handle_done().await?,
             event = self.receiver.recv() => {},
         }
         Ok(())
@@ -142,6 +182,39 @@ impl Connection {
         loop {
             self.handle_iter().await?;
         }
+    }
+
+    async fn handle_done(&mut self) -> Result<()> {
+        if let Some(job) = self.backlog.pop() {
+            let sender = self.sender.clone();
+            self.tasks.spawn(Self::job(job, sender));
+        } else {
+        }
+        Ok(())
+    }
+
+    fn handle_message(&mut self, message: ServerMessage) {
+        match message {
+            ServerMessage::JobList(jobs) => {
+                for job in jobs.into_iter() {
+                    self.handle_job(job);
+                }
+            },
+            ServerMessage::JobResponse(job) => self.handle_job(job),
+            ServerMessage::ChallengeRequest(_) => unreachable!(),
+        }
+    }
+
+    fn handle_job(&mut self, job: Job) {
+        if self.tasks.len() > 8 {
+            self.backlog.push(job);
+        } else {
+            let sender = self.sender.clone();
+            self.tasks.spawn(Self::job(job, sender));
+        }
+    }
+
+    pub async fn job(job: Job, sender: Sender<Event>) {
     }
 }
 
