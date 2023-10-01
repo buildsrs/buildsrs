@@ -50,7 +50,7 @@ registry-sync:
 
 # launch builder
 builder:
-    RUST_LOG=debug cargo run -p buildsrs-builder -- --private-key-file ~/.ssh/id_ed25519 --websocket ws://localhost:8000/api/v1/jobs
+    RUST_LOG=debug cargo run -p buildsrs-builder -- --private-key-file ~/.ssh/id_ed25519 connect --websocket ws://localhost:8000/api/v1/jobs
 
 # Format source with rustfmt nightly
 format:

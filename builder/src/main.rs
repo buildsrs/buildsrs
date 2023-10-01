@@ -27,25 +27,12 @@ pub struct Options {
     #[clap(long, short, env)]
     pub private_key_file: PathBuf,
 
-    /// WebSocket endpoint to connect to.
-    #[clap(long, short, env, default_value = DEFAULT_WEBSOCKET)]
-    pub websocket: Url,
-
-    /// Timeout for connection to backend.
-    #[clap(long, env, default_value = "1m")]
-    pub timeout_connect: DurationString,
-
-    /// Timeout for authentication with backend.
-    #[clap(long, env, default_value = "1m")]
-    pub timeout_authenticate: DurationString,
-
-    /// Job many jobs to run in parallel.
-    #[clap(long, env, default_value = "1")]
-    pub parallel: usize,
-
     /// Target this builder will build.
     #[clap(long, env, default_value = "x86_86-unknown-linux-gnu")]
     pub target: String,
+
+    #[clap(subcommand)]
+    pub command: Command,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -57,8 +44,10 @@ pub enum Command {
 /// Build a single crate.
 #[derive(Parser, Debug, Clone)]
 pub struct BuildCommand {
-    #[clap(long = "crate")]
     pub krate: Url,
+
+    #[clap(long)]
+    pub checksum: Option<String>,
 }
 
 /// Connect to backend to service jobs.
@@ -230,27 +219,33 @@ async fn main() -> Result<()> {
         private_key.fingerprint(HashAlg::Sha512)
     );
 
-    debug!("Connecting to WebSocket");
-    let mut connection = timeout(
-        options.timeout_connect.into(),
-        Connection::connect(private_key, &options.websocket),
-    )
-    .await??;
-    info!("Connected to {}", options.websocket);
+    match options.command {
+        Command::Connect(options) => {
+            debug!("Connecting to WebSocket");
+            let mut connection = timeout(
+                options.timeout_connect.into(),
+                Connection::connect(private_key, &options.websocket),
+            )
+            .await??;
+            info!("Connected to {}", options.websocket);
 
-    debug!("Authenticating with WebSocket",);
-    timeout(
-        options.timeout_authenticate.into(),
-        connection.authenticate(),
-    )
-    .await??;
-    info!("Authenticated with WebSocket");
+            debug!("Authenticating with WebSocket",);
+            timeout(
+                options.timeout_authenticate.into(),
+                connection.authenticate(),
+            )
+            .await??;
+            info!("Authenticated with WebSocket");
 
-    debug!("Synchronizing task list");
-    connection.tasks_sync().await?;
+            debug!("Synchronizing task list");
+            connection.tasks_sync().await?;
 
-    debug!("Handling events");
-    connection.handle().await?;
+            debug!("Handling events");
+            connection.handle().await?;
+        },
+        Command::Build(options) => {
+        },
+    }
 
     Ok(())
 }
