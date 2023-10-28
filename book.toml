@@ -1,0 +1,10 @@
+[book]
+authors = ["Patrick Elsen"]
+language = "en"
+multilingual = false
+src = "docs"
+title = "Builds.rs Documentation"
+
+[build]
+build-dir = "target/book"
+create-missing = true

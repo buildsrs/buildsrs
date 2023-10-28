@@ -81,6 +81,17 @@ frontend:
     paths:
       - frontend/dist
 
+book:
+  stage: build
+  image: alpine
+  before_script:
+    - apk add mdbook
+  script:
+    - mdbook build
+  artifacts:
+    paths:
+      - target/book
+
 deploy:
   stage: publish
   image: docker
@@ -100,14 +111,8 @@ deploy:
 pages:
   stage: publish
   image: alpine
-  before_script:
-    - apk add brotli
   script:
-    - export FILES=$(find frontend/dist -type f)
-    - gzip -k $FILES
-    - brotli -k $FILES
-    - mv frontend/dist public
-    - echo '/* / 200' >> public/_redirects
+    - md target/book public
   artifacts:
     paths:
       - public
