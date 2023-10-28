@@ -113,8 +113,10 @@ deploy:
 pages:
   stage: publish
   image: alpine
+  dependencies:
+    - book
   script:
-    - md target/book public
+    - mv target/book public
   artifacts:
     paths:
       - public
