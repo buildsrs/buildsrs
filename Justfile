@@ -29,7 +29,7 @@ database-cli *COMMAND:
 
 # run all unit tests
 test filter='':
-    DATABASE="{{postgres_str}}" cargo test -p buildsrs-database -p buildsrs-backend -p buildsrs-builder -p buildsrs-common -p buildsrs-protocol --all-features {{filter}}
+    DATABASE="{{postgres_str}}" cargo test --all-features {{filter}}
     DATABASE="{{postgres_str}}" cargo test -p buildsrs-registry-sync --all-features {{filter}}
 
 # generate test coverage report

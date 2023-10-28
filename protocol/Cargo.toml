@@ -2,6 +2,8 @@
 name = "buildsrs-protocol"
 version = "0.1.0"
 edition = "2021"
+license = { workspace = true }
+authors = { workspace = true }
 
 [dependencies]
 bytes = { version = "1.5.0", features = ["serde"] }
