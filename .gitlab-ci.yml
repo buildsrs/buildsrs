@@ -4,10 +4,12 @@ stages:
 
 default:
   interruptible: true
+  timeout: 10 minutes
+  retry: 1
 
 test:
   stage: build
-  image: rust:1.71-bookworm
+  image: rust:1.73-bookworm
   services:
     - name: postgres:15
       variables:
@@ -69,7 +71,7 @@ registry-sync:
 
 frontend:
   stage: build
-  image: rust:1.71-bookworm
+  image: rust:1.73-bookworm
   variables:
     TRUNK_VERSION: 0.17.5
   before_script:
