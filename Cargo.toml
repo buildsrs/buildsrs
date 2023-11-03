@@ -10,17 +10,6 @@ members = [
     "registry-sync",
 ]
 
-# need to build and test the registry-sync component separately, because it
-# enables a feature on a dependency that breaks other code.
-default-members = [
-    "backend",
-    "builder",
-    "common",
-    "database",
-    "frontend",
-    "protocol",
-]
-
 [workspace.dependencies]
 buildsrs-database = { path = "./database" }
 buildsrs-common = { path = "./common" }
