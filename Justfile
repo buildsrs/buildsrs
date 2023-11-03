@@ -7,17 +7,17 @@ postgres_str := "host=localhost user=" + postgres_user + " password=" + postgres
 list:
     just --list
 
-# start postgres database
-database:
-    docker run -it --name buildsrs_postgres --rm -e POSTGRES_USER={{postgres_user}} -e POSTGRES_PASSWORD={{postgres_pass}} -p 127.0.0.1:5432:5432 postgres postgres -c log_statement=all
+# launch services, pass 'down' as command to stop.
+services *COMMAND='up':
+    docker compose {{COMMAND}}
 
 # start repl with specified postgres database
 database-repl DATABASE:
-    docker exec -it buildsrs_postgres psql -U postgres -d {{DATABASE}}
+    docker compose exec database psql -U postgres -d {{DATABASE}}
 
 # save database dump
 database-dump NAME='latest' DATABASE='postgres':
-    docker exec -it buildsrs_postgres pg_dump -U postgres -d {{DATABASE}} --inserts | xz > database/dumps/{{NAME}}.sql.xz
+    docker compose exec database pg_dump -U postgres -d {{DATABASE}} --inserts | xz > database/dumps/{{NAME}}.sql.xz
 
 # test database
 database-test:
