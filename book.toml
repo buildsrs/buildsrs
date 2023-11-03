@@ -8,3 +8,13 @@ title = "Builds.rs Documentation"
 [build]
 build-dir = "target/book"
 create-missing = true
+
+[preprocessor]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output]
+
+[output.html]
+additional-js = ["docs/assets/mermaid.min.js", "docs/assets/mermaid-init.js"]
