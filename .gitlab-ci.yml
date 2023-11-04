@@ -29,6 +29,18 @@ test:
   script:
     - cargo test --all-features
 
+rustdoc:
+  stage: build
+  image: rust:1.73-bookworm
+  before_script:
+    - apt update
+    - apt install -y cmake
+  script:
+    - cargo doc --no-deps
+  artifacts:
+    paths:
+      - target/doc
+
 backend:
   stage: build
   image: docker
@@ -118,8 +130,10 @@ pages:
   image: alpine
   dependencies:
     - book
+    - rustdoc
   script:
     - mv target/book public
+    - mv target/doc public/rustdoc
   artifacts:
     paths:
       - public
