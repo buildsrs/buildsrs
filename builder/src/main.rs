@@ -73,8 +73,7 @@ pub struct ConnectCommand {
 /// WebSocket connection type alias.
 type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
-pub enum Event {
-}
+pub enum Event {}
 
 pub struct Connection {
     /// Private key, used for authentication and artifact signing.
@@ -188,7 +187,7 @@ impl Connection {
                 for job in jobs.into_iter() {
                     self.handle_job(job);
                 }
-            },
+            }
             ServerMessage::JobResponse(job) => self.handle_job(job),
             ServerMessage::ChallengeRequest(_) => unreachable!(),
         }
@@ -203,8 +202,7 @@ impl Connection {
         }
     }
 
-    pub async fn job(job: Job, sender: Sender<Event>) {
-    }
+    pub async fn job(job: Job, sender: Sender<Event>) {}
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -242,9 +240,8 @@ async fn main() -> Result<()> {
 
             debug!("Handling events");
             connection.handle().await?;
-        },
-        Command::Build(options) => {
-        },
+        }
+        Command::Build(options) => {}
     }
 
     Ok(())
