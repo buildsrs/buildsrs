@@ -640,11 +640,13 @@ dependencies = [
  "axum",
  "buildsrs-database",
  "buildsrs-protocol",
+ "bytes",
  "clap",
  "futures",
  "serde_json",
  "thiserror",
  "tokio",
+ "url",
 ]
 
 [[package]]
