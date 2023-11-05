@@ -14,6 +14,7 @@ variables:
   TRUNK_VERSION: 0.17.5
   MDBOOK_MERMAID_VERSION: 0.12.6
   CARGO_LLVM_COV_VERSION: 0.5.36
+  CARGO_HACK_VERSION: 0.6.13
 
 .rust:
   image: rust:1.73-bookworm
@@ -58,6 +59,13 @@ coverage:
   artifacts:
     paths:
       - target/llvm-cov/html
+
+features:
+  extends: [".rust"]
+  stage: check
+  script:
+    - curl -sSL "https://github.com/taiki-e/cargo-hack/releases/download/v0.6.13/cargo-hack-x86_64-unknown-linux-musl.tar.gz" | tar zxv -C /usr/local/bin
+    - cargo hack --each-feature check
 
 clippy:
   extends: [".rust"]
