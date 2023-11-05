@@ -1,21 +1,21 @@
 [package]
 name = "buildsrs-builder"
-version = "0.1.0"
 edition = "2021"
-license = { workspace = true }
-authors = { workspace = true }
+version.workspace = true
+license.workspace = true
+authors.workspace = true
 
 [dependencies]
-tokio = { version = "1.31.0", features = ["macros", "rt", "sync", "time"] }
-tokio-tungstenite = { version = "0.20.0", features = ["rustls-tls-native-roots"] }
+tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+tokio-tungstenite = { version = "0.20.1", features = ["rustls-tls-native-roots"] }
 buildsrs-protocol = { workspace = true }
-clap = { version = "4.4.3", features = ["derive", "env"] }
-ssh-key = { version = "0.6.1", features = ["ed25519"] }
-url = "2.4.1"
-anyhow = "1.0.75"
-tracing = "0.1.37"
-tracing-subscriber = "0.3.17"
+clap = { workspace = true, features = ["derive", "env"] }
+ssh-key = { workspace = true, features = ["ed25519"] }
+url.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 duration-string = "0.3.0"
-serde_json = "1.0.107"
-futures = "0.3.28"
+serde_json.workspace = true
+futures.workspace = true
 bollard = "0.15.0"
