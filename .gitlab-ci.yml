@@ -13,6 +13,7 @@ variables:
   SCCACHE_VERSION: 0.6.0
   TRUNK_VERSION: 0.17.5
   MDBOOK_MERMAID_VERSION: 0.12.6
+  CARGO_LLVM_COV_VERSION: 0.5.36
 
 .rust:
   image: rust:1.73-bookworm
@@ -26,9 +27,7 @@ variables:
   after_script:
     - sccache --stop-server
 
-test:
-  extends: [".rust"]
-  stage: check
+.services:
   services:
     - name: postgres:16
       variables:
@@ -42,8 +41,23 @@ test:
       command: ["server", "/data"]
   variables:
     DATABASE: "host=postgres user=postgres password=password"
+
+test:
+  extends: [".rust", ".services"]
+  stage: check
   script:
     - cargo test --all-features
+
+coverage:
+  extends: [".rust", ".services"]
+  stage: check
+  script:
+    - curl -sSL "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${CARGO_LLVM_COV_VERSION}/cargo-llvm-cov-aarch64-unknown-linux-musl.tar.gz" | tar zxv -C /usr/local/bin
+    - rustup component add llvm-tools
+    - cargo llvm-cov --all-features --html --fail-under-lines 30 --ignore-run-fail
+  artifacts:
+    paths:
+      - target/llvm-cov/html
 
 clippy:
   extends: [".rust"]
@@ -149,9 +163,11 @@ pages:
   dependencies:
     - book
     - rustdoc
+    - coverage
   script:
     - mv target/book public
     - mv target/doc public/rustdoc
+    - mv target/llvm-cov/html public/coverage
   artifacts:
     paths:
       - public
