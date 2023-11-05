@@ -67,7 +67,7 @@ features:
     - curl -sSL "https://github.com/taiki-e/cargo-hack/releases/download/v0.6.13/cargo-hack-x86_64-unknown-linux-musl.tar.gz" | tar zxv -C /usr/local/bin
     - cargo hack --each-feature check
 
-clippy:
+style:
   extends: [".rust"]
   stage: check
   script:
