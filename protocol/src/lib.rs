@@ -5,6 +5,9 @@ use ssh_key::{Fingerprint, HashAlg, PrivateKey, PublicKey, SshSig};
 use url::Url;
 use uuid::Uuid;
 
+/// Signature namespace for verified messages
+const NAMESPACE_BUILDSRS: &str = "builder@builds.rs";
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ServerMessage {
     ChallengeRequest(Bytes),
@@ -50,7 +53,7 @@ pub enum SignatureError {
 impl<T: Serialize> SignedMessage<T> {
     pub fn new(key: &PrivateKey, message: T) -> Result<Self, SignatureError> {
         let encoded = serde_json::to_string(&message)?;
-        let sig = key.sign("builder@builds.rs", HashAlg::Sha512, encoded.as_bytes())?;
+        let sig = key.sign(NAMESPACE_BUILDSRS, HashAlg::Sha512, encoded.as_bytes())?;
         let signature = sig.to_pem(Default::default())?;
         Ok(Self { message, signature })
     }
@@ -58,7 +61,7 @@ impl<T: Serialize> SignedMessage<T> {
     pub fn verify(&self, key: &PublicKey) -> Result<(), SignatureError> {
         let encoded = serde_json::to_string(&self.message)?;
         let signature = SshSig::from_pem(&self.signature)?;
-        key.verify("builder@builds.rs", &encoded.as_bytes(), &signature)?;
+        key.verify(NAMESPACE_BUILDSRS, &encoded.as_bytes(), &signature)?;
         Ok(())
     }
 }

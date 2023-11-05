@@ -8,9 +8,6 @@ pub struct Options {
 
     #[clap(short, long, env = "BUILDSRS_LISTEN", default_value = "127.0.0.1:8000")]
     pub listen: SocketAddr,
-
-    #[clap(flatten)]
-    pub bucket: BucketOptions,
 }
 
 #[derive(Parser, Debug)]

@@ -8,7 +8,6 @@ use std::{ops::Deref, sync::Arc};
 #[derive(Debug)]
 pub struct Shared {
     database: Database,
-    bucket: BucketTraitObject,
 }
 
 #[derive(Clone, Debug)]
@@ -26,20 +25,11 @@ impl Deref for Backend {
 
 impl Backend {
     pub async fn new(options: &Options) -> Result<Self> {
-        let Options {
-            database,
-            bucket: bucket_options,
-            ..
-        } = options;
+        let Options { database, .. } = options;
 
         Backend {
             shared: Shared {
                 database: Database::connect(database).await?,
-                bucket: Box::new(WasabiBucket::new(
-                    &bucket_options.name,
-                    bucket_options.into(),
-                    &bucket_options.region,
-                )?) as BucketTraitObject,
             }
             .apply(Arc::new),
         }
@@ -48,9 +38,5 @@ impl Backend {
 
     pub fn database(&self) -> &Database {
         &self.shared.database
-    }
-
-    pub fn bucket(&self) -> &BucketTraitObject {
-        &self.shared.bucket
     }
 }
