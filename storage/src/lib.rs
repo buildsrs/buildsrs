@@ -5,6 +5,8 @@ use url::Url;
 
 pub type SharedError = Arc<dyn Error + Send + Sync>;
 
+#[cfg(feature = "cache")]
+pub mod cache;
 #[cfg(feature = "filesystem")]
 pub mod filesystem;
 #[cfg(test)]
@@ -19,7 +21,7 @@ pub enum StorageError {
     Other(#[from] SharedError),
 }
 
-#[derive(Clone, Debug, Arbitrary)]
+#[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ArtifactKind {
     Manifest,
     Tarball,
@@ -36,7 +38,7 @@ impl ArtifactKind {
     }
 }
 
-#[derive(Clone, Debug, Arbitrary)]
+#[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ArtifactId {
     #[strategy("[a-z]{20}")]
     pub krate: String,
