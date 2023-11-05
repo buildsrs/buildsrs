@@ -88,21 +88,21 @@ impl Expiry<ArtifactId, Entry> for CacheConfig {
 /// The cache is implemented using the moka crate, which is optimized for highly concurrent,
 /// lock-free access.
 #[derive(Clone, Debug)]
-pub struct Cache<S: Storage> {
+pub struct Cache {
     /// Underlying storage implementation
-    storage: Arc<S>,
+    storage: AnyStorage,
     /// Cache used for artifact sources
     cache: MokaCache<ArtifactId, Entry>,
 }
 
-impl<S: Storage> Cache<S> {
+impl Cache {
     /// Create new caching layer on top of a storage.
     ///
     /// You need to create a [`CacheConfig`] to create the cache, which specifies some important
     /// metrics such as the capacity of the cache.
     /// You can use [`CacheConfig::default()`] to use defaults, which should be sane. Read the
     /// documentation on [`CacheConfig`] for more information on what can be tuned.
-    pub fn new(storage: S, config: CacheConfig) -> Self {
+    pub fn new(storage: AnyStorage, config: CacheConfig) -> Self {
         // we use a custom weigher to ensure that entries are weighed by their size in bytes.
         // unfortunately, the weigher only supports u32 values, so when our entry is too big (more
         // than 4GB) we will fall back to using the maximum value.
@@ -111,13 +111,12 @@ impl<S: Storage> Cache<S> {
             .max_capacity(config.capacity)
             .expire_after(config)
             .build();
-        let storage = Arc::new(storage);
 
         Self { storage, cache }
     }
 
     /// Get a reference to the underlying storage.
-    pub fn storage(&self) -> &Arc<S> {
+    pub fn storage(&self) -> &AnyStorage {
         &self.storage
     }
 
@@ -130,7 +129,7 @@ impl<S: Storage> Cache<S> {
 }
 
 #[async_trait::async_trait]
-impl<S: Storage> Storage for Cache<S> {
+impl Storage for Cache {
     async fn artifact_put(&self, version: &ArtifactId, data: &[u8]) -> Result<(), StorageError> {
         // we cannot cache mutable operations.
         self.storage().artifact_put(version, data).await
@@ -163,3 +162,44 @@ impl<S: Storage> Storage for Cache<S> {
         }
     }
 }
+
+#[cfg(feature = "options")]
+mod options {
+    use super::*;
+    use clap::Parser;
+    use std::path::PathBuf;
+
+    #[derive(Parser, Clone, Debug)]
+    pub struct CacheOptions {
+        /// Enables storage cache
+        #[clap(long, env)]
+        pub storage_cache: bool,
+
+        /// Storage cache capacity (in bytes)
+        #[clap(long, requires("storage_cache"), env, default_value = "16000000")]
+        pub storage_cache_capacity: u64,
+
+        /// Timeout for package missing entries in the cache.
+        #[clap(long, requires("storage_cache"), env, default_value = "60")]
+        pub storage_cache_missing_timeout: u64,
+    }
+
+    impl CacheOptions {
+        fn maybe_cache(&self, storage: AnyStorage) -> AnyStorage {
+            if self.storage_cache {
+                let config = CacheConfig {
+                    capacity: self.storage_cache_capacity,
+                    timeout_missing: Duration::from_secs(self.storage_cache_missing_timeout),
+                    ..Default::default()
+                };
+                let cache = Cache::new(storage, config);
+                Arc::new(cache)
+            } else {
+                storage
+            }
+        }
+    }
+}
+
+#[cfg(feature = "options")]
+pub use options::CacheOptions;

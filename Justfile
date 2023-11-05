@@ -2,6 +2,17 @@
 postgres_user := "postgres"
 postgres_pass := "password"
 postgres_str := "host=localhost user=" + postgres_user + " password=" + postgres_pass
+postgres_env := "DATABASE=\"" + postgres_str + "\""
+
+# local storage credentials
+storage_endpoint := "http://localhost:9000"
+storage_user := "buildsrs"
+storage_pass := "password"
+storage_port := "9000"
+storage_env := "STORAGE_S3_ENDPOINT=" + storage_endpoint + " STORAGE_S3_ACCESS_KEY_ID=" + storage_user + " STORAGE_S3_SECRET_ACCESS_KEY=" + storage_pass + " STORAGE_S3_REGION=us-east-1"
+
+# environment for services
+services_env := postgres_env + " " + storage_env
 
 # list targets and help
 list:
@@ -29,11 +40,11 @@ database-cli *COMMAND:
 
 # run all unit tests
 test filter='':
-    DATABASE="{{postgres_str}}" cargo test --all-features {{filter}}
+    {{services_env}} cargo test --all-features {{filter}}
 
 # generate test coverage report
 coverage:
-    DATABASE="{{postgres_str}}" cargo llvm-cov --all-features
+    {{services_env}} cargo llvm-cov --all-features
 
 # launch frontend
 frontend:

@@ -3,15 +3,19 @@ use std::{error::Error, fmt::Debug, sync::Arc, time::Duration};
 use test_strategy::Arbitrary;
 use url::Url;
 
+/// Shared generic error.
 pub type SharedError = Arc<dyn Error + Send + Sync>;
 
 #[cfg(feature = "cache")]
 pub mod cache;
 #[cfg(feature = "filesystem")]
 pub mod filesystem;
+#[cfg(feature = "s3")]
+pub mod s3;
 #[cfg(test)]
 pub mod tests;
 
+/// Error in storage operation.
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum StorageError {
     #[error("artifact not found")]
@@ -21,6 +25,7 @@ pub enum StorageError {
     Other(#[from] SharedError),
 }
 
+/// Kind of artifact.
 #[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ArtifactKind {
     Manifest,
@@ -29,7 +34,7 @@ pub enum ArtifactKind {
 }
 
 impl ArtifactKind {
-    fn extension(&self) -> &'static str {
+    pub fn extension(&self) -> &'static str {
         match self {
             Self::Manifest => "json",
             Self::Tarball => "tar.gz",
@@ -50,7 +55,7 @@ pub struct ArtifactId {
 }
 
 impl ArtifactId {
-    fn file_name(&self) -> String {
+    pub fn file_name(&self) -> String {
         let Self {
             krate,
             version,
@@ -73,6 +78,60 @@ impl ArtifactData {
         match self {
             Self::Data { bytes } => Some(&bytes),
             _ => None,
+        }
+    }
+}
+
+#[cfg(feature = "options")]
+mod options {
+    use super::*;
+    use clap::{Parser, ValueEnum};
+    use std::error::Error;
+
+    const DEFAULT_STORAGE: &'static str = "filesystem";
+
+    /// Kind of storage to use.
+    #[derive(ValueEnum, Clone, Debug)]
+    pub enum StorageKind {
+        #[cfg(feature = "filesystem")]
+        Filesystem,
+        #[cfg(feature = "s3")]
+        S3,
+    }
+
+    /// Options for storage.
+    #[derive(Parser, Clone, Debug)]
+    pub struct StorageOptions {
+        /// Which storage backend to use.
+        #[clap(long, default_value = DEFAULT_STORAGE)]
+        pub storage: StorageKind,
+
+        #[clap(flatten)]
+        #[cfg(feature = "filesystem")]
+        pub filesystem: filesystem::FilesystemOptions,
+
+        #[clap(flatten)]
+        #[cfg(feature = "s3")]
+        pub s3: s3::S3Options,
+
+        #[clap(flatten)]
+        #[cfg(feature = "cache")]
+        pub cache: cache::CacheOptions,
+    }
+
+    impl StorageOptions {
+        pub async fn build(&self) -> Result<AnyStorage, Box<dyn Error + Send + Sync>> {
+            let storage = match self.storage {
+                #[cfg(feature = "filesystem")]
+                StorageKind::Filesystem => Arc::new(self.filesystem.build().await) as AnyStorage,
+                #[cfg(feature = "s3")]
+                StorageKind::S3 => Arc::new(self.s3.build().await) as AnyStorage,
+            };
+
+            #[cfg(feature = "storage-cache")]
+            let storage = self.cache.maybe_cache(storage);
+
+            Ok(storage)
         }
     }
 }
