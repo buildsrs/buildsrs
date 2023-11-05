@@ -1,6 +1,7 @@
 stages:
+  - check
   - build
-  - publish
+  - deploy
 
 default:
   interruptible: true
@@ -27,7 +28,7 @@ variables:
 
 test:
   extends: [".rust"]
-  stage: build
+  stage: check
   services:
     - name: postgres:16
       variables:
@@ -43,6 +44,16 @@ test:
     DATABASE: "host=postgres user=postgres password=password"
   script:
     - cargo test --all-features
+
+clippy:
+  extends: [".rust"]
+  stage: check
+  script:
+    - rustup toolchain add nightly
+    - rustup component add rustfmt --toolchain nightly
+    - rustup component add clippy
+    - cargo +nightly fmt --check --all
+    - cargo clippy --workspace --all-features
 
 rustdoc:
   extends: [".rust"]
@@ -96,11 +107,9 @@ registry-sync:
 frontend:
   stage: build
   extends: [".rust"]
-  before_script:
-    - curl -sSL "https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION/sccache-v$SCCACHE_VERSION-x86_64-unknown-linux-musl.tar.gz" | tar -xzf- -C /usr/local/bin --strip-components=1
+  script:
     - rustup target add wasm32-unknown-unknown
     - wget -qO- https://github.com/thedodd/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- -C /usr/local/bin
-  script:
     - cd frontend && trunk build --release
   artifacts:
     paths:
@@ -119,7 +128,7 @@ book:
       - target/book
 
 deploy:
-  stage: publish
+  stage: deploy
   image: docker
   variables:
     DOCKER_HOST: ssh://$DEPLOY_HOST
@@ -135,7 +144,7 @@ deploy:
     - prod
 
 pages:
-  stage: publish
+  stage: deploy
   image: alpine
   dependencies:
     - book

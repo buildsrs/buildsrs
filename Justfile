@@ -54,3 +54,8 @@ builder:
 # Format source with rustfmt nightly
 format:
     cargo +nightly fmt --all
+
+# run formatting and style checks
+check:
+    cargo +nightly fmt --check --all
+    cargo clippy --workspace --all-features
