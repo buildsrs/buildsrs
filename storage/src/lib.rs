@@ -12,7 +12,7 @@ pub mod tests;
 
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum StorageError {
-    #[error("package missing")]
+    #[error("artifact not found")]
     NotFound(#[source] SharedError),
 
     #[error(transparent)]

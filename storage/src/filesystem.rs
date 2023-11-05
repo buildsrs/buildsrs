@@ -35,7 +35,7 @@ impl<P: AsRef<Path>> Filesystem<P> {
     }
 
     /// Get the full path where an artifact ID might be stored.
-    pub fn package_path(&self, version: &ArtifactId) -> PathBuf {
+    pub fn artifact_path(&self, version: &ArtifactId) -> PathBuf {
         self.path().join(version.file_name())
     }
 
@@ -44,7 +44,7 @@ impl<P: AsRef<Path>> Filesystem<P> {
         version: &ArtifactId,
         data: &[u8],
     ) -> Result<(), FilesystemError> {
-        let path = self.package_path(&version);
+        let path = self.artifact_path(&version);
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -68,7 +68,7 @@ impl<P: AsRef<Path>> Filesystem<P> {
     }
 
     async fn do_artifact_get(&self, version: &ArtifactId) -> Result<Bytes, FilesystemError> {
-        let path = self.package_path(version);
+        let path = self.artifact_path(version);
         tokio::fs::read(&path)
             .await
             .map(Into::into)
@@ -114,7 +114,7 @@ pub mod tests {
     }
 
     #[proptest(async = "tokio")]
-    async fn can_write_package(version: ArtifactId, contents: Vec<u8>) {
+    async fn can_write_artifact(version: ArtifactId, contents: Vec<u8>) {
         with(temp_filesystem, |storage| async move {
             storage.artifact_put(&version, &contents).await.unwrap();
 
@@ -126,7 +126,11 @@ pub mod tests {
     }
 
     #[proptest(async = "tokio")]
-    async fn can_write_package_existing(version: ArtifactId, previous: Vec<u8>, contents: Vec<u8>) {
+    async fn can_write_artifact_existing(
+        version: ArtifactId,
+        previous: Vec<u8>,
+        contents: Vec<u8>,
+    ) {
         with(temp_filesystem, |storage| async move {
             let path = storage.path().join(version.file_name());
             tokio::fs::write(&path, &previous).await.unwrap();
@@ -140,14 +144,14 @@ pub mod tests {
     }
 
     #[proptest(async = "tokio")]
-    async fn cannot_read_package_missing(version: ArtifactId) {
+    async fn cannot_read_artifact_missing(version: ArtifactId) {
         with(temp_filesystem, |storage| async move {
             let path = storage.path().join(version.file_name());
 
             let error = storage.artifact_get(&version).await.err().unwrap();
 
             assert!(matches!(error, StorageError::NotFound(_)));
-            assert_eq!(error.to_string(), format!("package missing"));
+            assert_eq!(error.to_string(), format!("artifact not found"));
             assert_eq!(
                 error.source().unwrap().to_string(),
                 format!("error writing to {path:?}")
@@ -157,7 +161,7 @@ pub mod tests {
     }
 
     #[proptest(async = "tokio")]
-    async fn can_read_package(version: ArtifactId, contents: Vec<u8>) {
+    async fn can_read_artifact(version: ArtifactId, contents: Vec<u8>) {
         with(temp_filesystem, |storage| async move {
             let path = storage.path().join(version.file_name());
             tokio::fs::write(&path, &contents).await.unwrap();
