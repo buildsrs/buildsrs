@@ -8,17 +8,18 @@ members = [
     "frontend",
     "protocol",
     "registry-sync",
+    "storage",
 ]
 
 [workspace.dependencies]
-buildsrs-database = { path = "./database" }
-buildsrs-common = { path = "./common" }
-buildsrs-protocol = { path = "./protocol" }
+buildsrs-database = { path = "database" }
+buildsrs-common = { path = "common" }
+buildsrs-storage = { path = "storage" }
+buildsrs-protocol = { path = "protocol" }
 tokio = { version = "1.28.0" }
 
 [workspace.package]
 license = "MIT"
-# add yourself here if you worked on this
 authors = [
     "Patrick Elsen <pelsen@xfbs.net>",
 ]

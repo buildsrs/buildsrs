@@ -1,6 +1,6 @@
 use anyhow::Result;
-use clap::Parser;
 use buildsrs_backend::*;
+use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<()> {

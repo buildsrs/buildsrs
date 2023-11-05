@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc bb009c97dc911b398747fed052976f4fb28e743b7e2996ebed137e12076349cf # shrinks to input = _CanWritePackageArgs { version: ArtifactId { krate: "/", version: "", target: "", kind: Manifest }, contents: [] }
+cc 2c89019cf7ebc68679078321db6a51c9d26c0f85be489df35fcfb60a3a3eba85 # shrinks to input = _CanReadPackageArgs { version: ArtifactId { krate: "/", version: "", target: "", kind: Manifest }, contents: [] }
+cc 0bf9b74127fdc6c52ebd5648c10bfbf054618ceeb33d96e1bcda63dee374af77 # shrinks to input = _CanWritePackageExistingArgs { version: ArtifactId { krate: "", version: "", target: "/", kind: Manifest }, previous: [], contents: [] }

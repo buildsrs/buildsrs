@@ -13,6 +13,7 @@ aws-sdk-s3 = "0.34"
 tokio = { version = "1.32.0", features = ["rt-multi-thread"] }
 buildsrs-database = { workspace = true }
 buildsrs-protocol = { workspace = true }
+buildsrs-storage = { workspace = true }
 clap = { version = "4.3.24", features = ["derive", "env"] }
 anyhow = "1.0.75"
 apply = "0.3.0"

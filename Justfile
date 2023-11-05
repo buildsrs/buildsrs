@@ -30,7 +30,6 @@ database-cli *COMMAND:
 # run all unit tests
 test filter='':
     DATABASE="{{postgres_str}}" cargo test --all-features {{filter}}
-    DATABASE="{{postgres_str}}" cargo test -p buildsrs-registry-sync --all-features {{filter}}
 
 # generate test coverage report
 coverage:
@@ -40,7 +39,7 @@ coverage:
 frontend:
     cd frontend && trunk serve
 
-# launch registry sync
+# launch backend
 backend:
     RUST_LOG=debug cargo run -p buildsrs-backend -- --database "{{postgres_str}}"
 
