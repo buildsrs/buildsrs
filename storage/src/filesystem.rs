@@ -99,24 +99,24 @@ impl<P: AsRef<Path> + Send + Sync + Debug> Storage for Filesystem<P> {
 #[cfg(any(feature = "options", test))]
 mod options {
     use super::*;
-    use clap::Parser;
+    use clap::Args;
     use std::path::PathBuf;
 
-    #[derive(Parser, Clone, Debug)]
+    #[derive(Args, Clone, Debug)]
     pub struct FilesystemOptions {
-        #[clap(long, env)]
-        pub storage_filesystem_path: PathBuf,
+        #[clap(long, env, required_if_eq("storage", "filesystem"))]
+        storage_filesystem_path: Option<PathBuf>,
     }
 
     impl FilesystemOptions {
         pub async fn build(&self) -> Filesystem {
-            Filesystem::new(self.storage_filesystem_path.clone())
+            Filesystem::new(self.storage_filesystem_path.clone().unwrap())
         }
     }
 }
 
 #[cfg(any(feature = "options", test))]
-pub use options::FilesystemOptions;
+pub(crate) use options::FilesystemOptions;
 
 #[cfg(test)]
 pub mod tests {

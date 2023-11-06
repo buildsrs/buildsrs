@@ -102,30 +102,30 @@ mod options {
 
     #[derive(Parser, Clone, Debug)]
     pub struct S3Options {
-        #[clap(long, env)]
-        pub storage_s3_endpoint: Url,
+        #[clap(long, env, required_if_eq("storage", "s3"))]
+        pub storage_s3_endpoint: Option<Url>,
 
-        #[clap(long, env)]
-        pub storage_s3_access_key_id: String,
+        #[clap(long, env, required_if_eq("storage", "s3"))]
+        pub storage_s3_access_key_id: Option<String>,
 
-        #[clap(long, env)]
-        pub storage_s3_secret_access_key: String,
+        #[clap(long, env, required_if_eq("storage", "s3"))]
+        pub storage_s3_secret_access_key: Option<String>,
 
-        #[clap(long, env)]
-        pub storage_s3_region: String,
+        #[clap(long, env, required_if_eq("storage", "s3"))]
+        pub storage_s3_region: Option<String>,
 
         #[clap(long, env)]
         pub storage_s3_path_style: bool,
 
-        #[clap(long, env, default_value = "buildsrs")]
-        pub storage_s3_bucket: String,
+        #[clap(long, env, default_value = "buildsrs", required_if_eq("storage", "s3"))]
+        pub storage_s3_bucket: Option<String>,
     }
 
     impl S3Options {
         fn credentials(&self) -> Credentials {
             Credentials::new(
-                &self.storage_s3_access_key_id,
-                &self.storage_s3_secret_access_key,
+                self.storage_s3_access_key_id.as_ref().unwrap(),
+                self.storage_s3_secret_access_key.as_ref().unwrap(),
                 None,
                 None,
                 "S3Options",
@@ -134,8 +134,10 @@ mod options {
 
         async fn config(&self) -> SdkConfig {
             aws_config::from_env()
-                .endpoint_url(self.storage_s3_endpoint.as_str())
-                .region(Region::new(self.storage_s3_region.clone()))
+                .endpoint_url(self.storage_s3_endpoint.as_ref().unwrap().as_str())
+                .region(Region::new(
+                    self.storage_s3_region.as_ref().unwrap().clone(),
+                ))
                 .credentials_provider(self.credentials())
                 .load()
                 .await
@@ -147,13 +149,13 @@ mod options {
                 .force_path_style(self.storage_s3_path_style)
                 .build();
             let client = Client::from_conf(config);
-            S3::new(client, self.storage_s3_bucket.clone())
+            S3::new(client, self.storage_s3_bucket.clone().unwrap())
         }
     }
 }
 
 #[cfg(any(feature = "options", test))]
-pub use options::S3Options;
+pub(crate) use options::S3Options;
 
 #[cfg(test)]
 pub mod tests {
@@ -216,8 +218,15 @@ pub mod tests {
 
     /// Create test client for S3.
     pub async fn temp_s3() -> (S3, Cleanup) {
-        let mut options = S3Options::parse();
-        options.storage_s3_bucket = random_bucket();
+        use std::env::var;
+        let mut options = S3Options {
+            storage_s3_endpoint: Some(var("MINIO_ENDPOINT").unwrap().parse().unwrap()),
+            storage_s3_access_key_id: Some(var("MINIO_USER").unwrap()),
+            storage_s3_secret_access_key: Some(var("MINIO_PASS").unwrap()),
+            storage_s3_region: Some("us-east-1".into()),
+            storage_s3_path_style: true,
+            storage_s3_bucket: Some(random_bucket()),
+        };
         let s3 = options.build().await;
         println!("Using client {s3:?}");
         s3.client()

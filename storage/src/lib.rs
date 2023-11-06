@@ -103,20 +103,20 @@ mod options {
     #[derive(Parser, Clone, Debug)]
     pub struct StorageOptions {
         /// Which storage backend to use.
-        #[clap(long, default_value = DEFAULT_STORAGE)]
-        pub storage: StorageKind,
+        #[clap(long)]
+        storage: StorageKind,
 
         #[clap(flatten)]
         #[cfg(feature = "filesystem")]
-        pub filesystem: filesystem::FilesystemOptions,
+        filesystem: filesystem::FilesystemOptions,
 
         #[clap(flatten)]
         #[cfg(feature = "s3")]
-        pub s3: s3::S3Options,
+        s3: s3::S3Options,
 
         #[clap(flatten)]
         #[cfg(feature = "cache")]
-        pub cache: cache::CacheOptions,
+        cache: cache::CacheOptions,
     }
 
     impl StorageOptions {
@@ -135,6 +135,9 @@ mod options {
         }
     }
 }
+
+#[cfg(feature = "options")]
+pub use options::StorageOptions;
 
 pub type AnyStorage = Arc<dyn Storage>;
 

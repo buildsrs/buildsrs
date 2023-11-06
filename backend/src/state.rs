@@ -1,42 +1,25 @@
-use super::Options;
-use crate::bucket::{wasabi::WasabiBucket, BucketTraitObject};
 use anyhow::Result;
 use apply::Apply;
 use buildsrs_database::Database;
+use buildsrs_storage::AnyStorage;
 use std::{ops::Deref, sync::Arc};
-
-#[derive(Debug)]
-pub struct Shared {
-    database: Database,
-}
 
 #[derive(Clone, Debug)]
 pub struct Backend {
-    shared: Arc<Shared>,
-}
-
-impl Deref for Backend {
-    type Target = Shared;
-
-    fn deref(&self) -> &Self::Target {
-        &self.shared
-    }
+    database: Arc<Database>,
+    storage: AnyStorage,
 }
 
 impl Backend {
-    pub async fn new(options: &Options) -> Result<Self> {
-        let Options { database, .. } = options;
-
-        Backend {
-            shared: Shared {
-                database: Database::connect(database).await?,
-            }
-            .apply(Arc::new),
-        }
-        .apply(Ok)
+    pub fn new(database: Arc<Database>, storage: AnyStorage) -> Self {
+        Backend { database, storage }
     }
 
     pub fn database(&self) -> &Database {
-        &self.shared.database
+        &self.database
+    }
+
+    pub fn storage(&self) -> &AnyStorage {
+        &self.storage
     }
 }

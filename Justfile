@@ -9,7 +9,7 @@ storage_endpoint := "http://localhost:9000"
 storage_user := "buildsrs"
 storage_pass := "password"
 storage_port := "9000"
-storage_env := "STORAGE_S3_ENDPOINT=" + storage_endpoint + " STORAGE_S3_ACCESS_KEY_ID=" + storage_user + " STORAGE_S3_SECRET_ACCESS_KEY=" + storage_pass + " STORAGE_S3_REGION=us-east-1"
+storage_env := "MINIO_ENDPOINT=" + storage_endpoint + " MINIO_USER=" + storage_user + " MINIO_PASS=" + storage_pass
 
 # environment for services
 services_env := postgres_env + " " + storage_env
@@ -52,7 +52,7 @@ frontend:
 
 # launch backend
 backend:
-    RUST_LOG=debug cargo run -p buildsrs-backend -- --database "{{postgres_str}}"
+    RUST_LOG=debug cargo run -p buildsrs-backend -- --database "{{postgres_str}}" --storage filesystem --storage-filesystem-path $(mktemp)
 
 # launch registry sync
 registry-sync:
