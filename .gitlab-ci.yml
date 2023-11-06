@@ -52,6 +52,19 @@ variables:
     STORAGE_S3_REGION: us-east-1
     STORAGE_S3_PATH_STYLE: "true"
 
+.docker:
+  stage: build
+  image: docker
+  services:
+    - docker:dind
+  tags:
+    - saas-linux-medium-amd64
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build . -f $FOLDER/Dockerfile -t $CI_REGISTRY_IMAGE/$FOLDER:$CI_COMMIT_REF_SLUG
+    - docker push "$CI_REGISTRY_IMAGE/$FOLDER:$CI_COMMIT_REF_SLUG"
+
 tests:
   extends: [".rust", ".services"]
   stage: check
@@ -96,44 +109,24 @@ rustdoc:
       - target/doc
 
 backend:
-  stage: build
-  image: docker
-  services:
-    - docker:dind
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build . -f backend/Dockerfile -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG
-    - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG"
+  extends: [".docker"]
+  variables:
+    FOLDER: backend
 
 migrate:
-  stage: build
-  image: docker
-  services:
-    - docker:dind
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build . -f database/Dockerfile -t $CI_REGISTRY_IMAGE/migrate:$CI_COMMIT_REF_SLUG
-    - docker push "$CI_REGISTRY_IMAGE/migrate:$CI_COMMIT_REF_SLUG"
+  extends: [".docker"]
+  variables:
+    FOLDER: database
 
 builder:
-  stage: build
-  image: docker
-  services:
-    - docker:dind
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build . -f builder/Dockerfile -t $CI_REGISTRY_IMAGE/builder:$CI_COMMIT_REF_SLUG
-    - docker push "$CI_REGISTRY_IMAGE/builder:$CI_COMMIT_REF_SLUG"
+  extends: [".docker"]
+  variables:
+    FOLDER: builder
 
 registry-sync:
-  stage: build
-  image: docker
-  services:
-    - docker:dind
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build . -f backend/Dockerfile -t $CI_REGISTRY_IMAGE/registry-sync:$CI_COMMIT_REF_SLUG
-    - docker push "$CI_REGISTRY_IMAGE/registry-sync:$CI_COMMIT_REF_SLUG"
+  extends: [".docker"]
+  variables:
+    FOLDER: registry-sync
 
 frontend:
   stage: build
