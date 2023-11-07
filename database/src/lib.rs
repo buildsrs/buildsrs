@@ -1,8 +1,7 @@
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use ssh_key::{HashAlg, PublicKey};
 use std::{collections::BTreeSet, pin::Pin, sync::Arc};
-use tokio::select;
-use tokio_postgres::{connect, types::Json, AsyncMessage, Client, GenericClient, NoTls, Statement};
+use tokio_postgres::{connect, AsyncMessage, Client, GenericClient, NoTls, Statement};
 pub use tokio_postgres::{Error, Transaction};
 use uuid::Uuid;
 
@@ -265,7 +264,7 @@ impl<T: GenericClient> Database<T> {
             .connection
             .query_one(&self.statements.builder_by_fingerprint, &[&fingerprint])
             .await?;
-        Ok(row.try_get("uuid")?)
+        row.try_get("uuid")
     }
 
     pub async fn builder_get(&self, builder: Uuid) -> Result<Builder, Error> {
@@ -329,7 +328,7 @@ impl<T: GenericClient> Database<T> {
                 &[&builder, &target, &Uuid::new_v4()],
             )
             .await?;
-        Ok(row.try_get("uuid")?)
+        row.try_get("uuid")
     }
 
     pub async fn job_info(&self, job: Uuid) -> Result<JobInfo, Error> {
@@ -348,9 +347,9 @@ impl<T: GenericClient> Database<T> {
 
     pub async fn job_list(
         &self,
-        builder: Option<Uuid>,
-        target: Option<&str>,
-        active: Option<bool>,
+        _builder: Option<Uuid>,
+        _target: Option<&str>,
+        _active: Option<bool>,
     ) -> Result<Vec<Uuid>, Error> {
         todo!()
     }
@@ -410,7 +409,7 @@ impl Database<Client> {
 
     /// Connect to database.
     pub async fn connect(database: &str) -> Result<Self, Error> {
-        let (client, mut connection) = connect(database, NoTls).await?;
+        let (client, connection) = connect(database, NoTls).await?;
         tokio::spawn(connection);
         Database::new(client).await
     }

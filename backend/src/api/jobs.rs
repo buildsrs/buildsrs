@@ -88,7 +88,7 @@ impl Connection {
 
     async fn handle_job_request(
         &mut self,
-        request: &JobRequest,
+        _request: &JobRequest,
     ) -> Result<ServerMessage, WebSocketError> {
         todo!()
     }

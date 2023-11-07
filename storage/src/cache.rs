@@ -1,5 +1,9 @@
+//! # Storage Cache
+//!
+//! This implements a layer that can be used with any storage provider which caches responses for a
+//! specific amount of time.
+
 use super::*;
-use bytes::Bytes;
 use moka::{future::Cache as MokaCache, Expiry};
 use std::{
     sync::Arc,
@@ -142,7 +146,7 @@ impl Storage for Cache {
         let result = self
             .cache
             .try_get_with(version.clone(), async move {
-                match storage.artifact_get(&version).await {
+                match storage.artifact_get(version).await {
                     Ok(bytes) => Ok(Entry::Data(bytes)),
                     Err(StorageError::NotFound(error)) => {
                         // we save the error, but wrap it in a CachedError, to communicate to
@@ -167,7 +171,6 @@ impl Storage for Cache {
 mod options {
     use super::*;
     use clap::Parser;
-    use std::path::PathBuf;
 
     #[derive(Parser, Clone, Debug)]
     pub struct CacheOptions {
@@ -185,12 +188,11 @@ mod options {
     }
 
     impl CacheOptions {
-        fn maybe_cache(&self, storage: AnyStorage) -> AnyStorage {
+        pub fn maybe_cache(&self, storage: AnyStorage) -> AnyStorage {
             if self.storage_cache {
                 let config = CacheConfig {
                     capacity: self.storage_cache_capacity,
                     timeout_missing: Duration::from_secs(self.storage_cache_missing_timeout),
-                    ..Default::default()
                 };
                 let cache = Cache::new(storage, config);
                 Arc::new(cache)
@@ -202,4 +204,4 @@ mod options {
 }
 
 #[cfg(feature = "options")]
-pub use options::CacheOptions;
+pub(crate) use options::CacheOptions;

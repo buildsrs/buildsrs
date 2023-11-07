@@ -1,8 +1,8 @@
 use buildsrs_database::Database;
 use clap::Parser;
-use crates_index::{Crate, GitIndex};
+use crates_index::GitIndex;
 use log::*;
-use std::{collections::BTreeMap, path::PathBuf, thread::sleep, time::Duration};
+use std::{path::PathBuf, thread::sleep, time::Duration};
 use url::Url;
 
 #[derive(Parser, PartialEq, Clone, Debug)]

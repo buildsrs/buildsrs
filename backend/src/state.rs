@@ -1,8 +1,6 @@
-use anyhow::Result;
-use apply::Apply;
 use buildsrs_database::Database;
 use buildsrs_storage::AnyStorage;
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct Backend {

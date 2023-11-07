@@ -1,7 +1,8 @@
+#![allow(dead_code)]
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 /// Generate a random alphanumeric string of a given length.
-pub(crate) fn random_alphanumeric(length: usize) -> String {
+pub fn random_alphanumeric(length: usize) -> String {
     let mut rng = thread_rng();
     (0..length)
         .map(|_| rng.sample(Alphanumeric) as char)
@@ -9,7 +10,7 @@ pub(crate) fn random_alphanumeric(length: usize) -> String {
 }
 
 /// Generate SQL to call a stored procedure with the given amount of parameters.
-pub(crate) fn sql_call(name: &str, count: usize) -> String {
+pub fn sql_call(name: &str, count: usize) -> String {
     format!(
         "CALL {name}({})",
         (1..=count)

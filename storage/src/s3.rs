@@ -5,7 +5,6 @@ use aws_sdk_s3::{
     primitives::{ByteStream, SdkBody},
     Client,
 };
-use bytes::Bytes;
 use std::sync::Arc;
 
 /// # S3-backed artifact storage.
@@ -62,14 +61,10 @@ impl Storage for S3 {
             .await;
 
         // determine if this is a no such key error and translate into artifact missing
-        match &response {
-            Err(SdkError::ServiceError(error)) => match error.err() {
-                GetObjectError::NoSuchKey(error) => {
-                    return Err(StorageError::NotFound(Arc::new(error.clone())));
-                }
-                _ => {}
-            },
-            _ => {}
+        if let Err(SdkError::ServiceError(error)) = &response {
+            if let GetObjectError::NoSuchKey(error) = error.err() {
+                return Err(StorageError::NotFound(Arc::new(error.clone())));
+            }
         }
 
         // return other errors as-is
@@ -95,7 +90,7 @@ mod options {
     use super::*;
     use aws_config::SdkConfig;
     use aws_credential_types::Credentials;
-    use aws_sdk_s3::{types::*, Config};
+    use aws_sdk_s3::Config;
     use aws_types::region::Region;
     use clap::Parser;
     use url::Url;
@@ -168,7 +163,6 @@ pub mod tests {
 
     use super::*;
     use crate::tests::*;
-    use aws_credential_types::Credentials;
     use aws_sdk_s3::types::*;
     use clap::Parser;
     use rand::{thread_rng, Rng};
@@ -219,7 +213,7 @@ pub mod tests {
     /// Create test client for S3.
     pub async fn temp_s3() -> (S3, Cleanup) {
         use std::env::var;
-        let mut options = S3Options {
+        let options = S3Options {
             storage_s3_endpoint: Some(var("MINIO_ENDPOINT").unwrap().parse().unwrap()),
             storage_s3_access_key_id: Some(var("MINIO_USER").unwrap()),
             storage_s3_secret_access_key: Some(var("MINIO_PASS").unwrap()),

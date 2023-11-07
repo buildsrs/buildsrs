@@ -95,7 +95,7 @@ style:
     - rustup component add rustfmt --toolchain nightly
     - rustup component add clippy
     - cargo +nightly fmt --check --all
-    - cargo clippy --workspace --all-features
+    - cargo clippy --workspace --all-features -- -D warnings
 
 rustdoc:
   extends: [".rust"]

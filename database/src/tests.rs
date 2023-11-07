@@ -32,7 +32,7 @@ async fn with_database_from_dump<O: Future<Output = ()>, F: FnOnce(Database) -> 
 async fn test_dump_2023_09_17() {
     let dump = decompress(include_bytes!("../dumps/2023-09-17.sql.xz"));
     let dump = std::str::from_utf8(&dump[..]).unwrap();
-    with_database_from_dump(&dump[..], |database: Database| async move {}).await;
+    with_database_from_dump(dump, |_database: Database| async move {}).await;
 }
 
 #[tokio::test]
@@ -47,7 +47,7 @@ async fn can_add_crate() {
         database.crate_add(name).await.unwrap();
         let info = database.crate_info(name).await.unwrap();
         assert_eq!(info.name, name);
-        assert_eq!(info.enabled, true);
+        assert!(info.enabled);
     })
     .await;
 }
@@ -66,7 +66,7 @@ async fn can_add_crate_version() {
         assert_eq!(info.name, name);
         assert_eq!(info.version, version);
         assert_eq!(info.checksum, "abcdef");
-        assert_eq!(info.yanked, false);
+        assert!(!info.yanked);
     })
     .await;
 }
@@ -103,7 +103,7 @@ async fn can_add_builder() {
         // make sure we can add a builder
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -126,7 +126,7 @@ async fn can_lookup_builder() {
         // make sure we can add a builder
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -153,7 +153,7 @@ async fn can_set_builder_comment() {
 
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -178,7 +178,7 @@ async fn can_set_builder_enabled() {
 
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -204,7 +204,7 @@ async fn can_add_builder_target() {
 
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -227,7 +227,7 @@ async fn can_remove_builder_target() {
 
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -254,7 +254,7 @@ async fn can_list_builder_target() {
 
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(uuid, &private_key.public_key(), "comment")
+            .builder_add(uuid, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();
@@ -277,23 +277,23 @@ async fn can_list_builder_target() {
 
 #[tokio::test]
 async fn can_target_add() {
-    with_database(|mut database: Database| async move {
+    with_database(|database: Database| async move {
         let target = "x86_64-unknown-unknown";
         database.target_add(target).await.unwrap();
         let info = database.target_info(target).await.unwrap();
         assert_eq!(info.name, target);
-        assert_eq!(info.enabled, false);
+        assert!(!info.enabled);
     })
     .await;
 }
 
 #[tokio::test]
 async fn can_target_set_enabled() {
-    with_database(|mut database: Database| async move {
+    with_database(|database: Database| async move {
         let target = "x86_64-unknown-unknown";
         database.target_add(target).await.unwrap();
         let info = database.target_info(target).await.unwrap();
-        assert_eq!(info.enabled, false);
+        assert!(!info.enabled);
         for enabled in [true, false] {
             database.target_enabled(target, enabled).await.unwrap();
             let info = database.target_info(target).await.unwrap();
@@ -305,7 +305,7 @@ async fn can_target_set_enabled() {
 
 #[tokio::test]
 async fn can_target_list() {
-    with_database(|mut database: Database| async move {
+    with_database(|database: Database| async move {
         let targets = ["x86_64-unknown-unknown", "arm64-unknown-musl"];
 
         // add targets
@@ -324,7 +324,7 @@ async fn can_target_list() {
 
 #[tokio::test]
 async fn can_target_remove() {
-    with_database(|mut database: Database| async move {
+    with_database(|database: Database| async move {
         let targets = ["x86_64-unknown-unknown", "arm64-unknown-musl"];
         for target in &targets {
             database.target_add(target).await.unwrap();
@@ -339,7 +339,7 @@ async fn can_target_remove() {
 
 #[tokio::test]
 async fn can_target_rename() {
-    with_database(|mut database: Database| async move {
+    with_database(|database: Database| async move {
         let target_original = "x86_64-unknown";
         let target_renamed = "x86_64-unknown-unknown";
         database.target_add(target_original).await.unwrap();
@@ -374,7 +374,7 @@ async fn can_job_create() {
         let builder = Uuid::new_v4();
         let transaction = database.transaction().await.unwrap();
         transaction
-            .builder_add(builder, &private_key.public_key(), "comment")
+            .builder_add(builder, private_key.public_key(), "comment")
             .await
             .unwrap();
         transaction.commit().await.unwrap();

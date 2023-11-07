@@ -1,4 +1,4 @@
-use buildsrs_database::{migrations, Database, Error, Transaction};
+use buildsrs_database::{migrations, Database, Transaction};
 use clap::Parser;
 use ssh_key::{HashAlg, PublicKey};
 use std::path::PathBuf;
@@ -92,7 +92,7 @@ impl Command {
                     comment,
                 } => {
                     let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
-                    database.builder_add(Uuid::new_v4(), &key, &comment).await?;
+                    database.builder_add(Uuid::new_v4(), &key, comment).await?;
                 }
                 BuilderCommand::Edit {
                     public_key_file,
@@ -110,15 +110,15 @@ impl Command {
                     }
 
                     if let Some(comment) = comment {
-                        database.builder_set_comment(builder, &comment).await?;
+                        database.builder_set_comment(builder, comment).await?;
                     }
 
                     for target in target_add {
-                        database.builder_target_add(builder, &target).await?;
+                        database.builder_target_add(builder, target).await?;
                     }
 
                     for target in target_remove {
-                        database.builder_target_remove(builder, &target).await?;
+                        database.builder_target_remove(builder, target).await?;
                     }
                 }
                 BuilderCommand::List => {
@@ -131,7 +131,7 @@ impl Command {
             },
             Command::Target { command } => match command {
                 TargetCommand::Add { target } => {
-                    database.target_add(&target).await?;
+                    database.target_add(target).await?;
                 }
                 TargetCommand::Edit {
                     target,
@@ -139,16 +139,16 @@ impl Command {
                     rename,
                 } => {
                     if let Some(enabled) = enabled {
-                        database.target_enabled(&target, *enabled).await?;
+                        database.target_enabled(target, *enabled).await?;
                     }
 
                     if let Some(rename) = rename {
-                        database.target_rename(&target, &rename).await?;
+                        database.target_rename(target, rename).await?;
                     }
                 }
                 TargetCommand::List => {
                     for target in &database.target_list().await? {
-                        let info = database.target_info(&target).await?;
+                        let _info = database.target_info(target).await?;
                         println!("{target:#?}");
                     }
                 }
@@ -169,12 +169,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(connection);
 
     // handle migration
-    match options.command {
-        Command::Migrate => {
-            migrations::runner().run_async(&mut client).await?;
-            return Ok(());
-        }
-        _ => {}
+    if let Command::Migrate = options.command {
+        migrations::runner().run_async(&mut client).await?;
+        return Ok(());
     }
 
     // create database handle, run command

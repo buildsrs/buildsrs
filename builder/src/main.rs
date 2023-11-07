@@ -122,7 +122,7 @@ impl Connection {
     pub async fn recv(websocket: &mut WebSocket) -> Result<ServerMessage> {
         loop {
             match websocket.next().await {
-                Some(Ok(Message::Text(text))) => todo!(),
+                Some(Ok(Message::Text(_text))) => todo!(),
                 _ => todo!(),
             }
         }
@@ -136,7 +136,7 @@ impl Connection {
             if let Some(message) = self.websocket.next().await {
                 let message: ServerMessage = match message? {
                     Message::Text(text) => serde_json::from_str(&text)?,
-                    other => continue,
+                    _other => continue,
                 };
                 match message {
                     ServerMessage::ChallengeRequest(challenge) => break challenge,
@@ -159,8 +159,8 @@ impl Connection {
     pub async fn handle_iter(&mut self) -> Result<()> {
         select! {
             message = Self::recv(&mut self.websocket) => self.handle_message(message?),
-            result = self.tasks.join_next() => self.handle_done().await?,
-            event = self.receiver.recv() => {},
+            _result = self.tasks.join_next() => self.handle_done().await?,
+            _event = self.receiver.recv() => {},
         }
         Ok(())
     }
@@ -176,7 +176,6 @@ impl Connection {
         if let Some(job) = self.backlog.pop() {
             let sender = self.sender.clone();
             self.tasks.spawn(Self::job(job, sender));
-        } else {
         }
         Ok(())
     }
@@ -202,7 +201,7 @@ impl Connection {
         }
     }
 
-    pub async fn job(job: Job, sender: Sender<Event>) {}
+    pub async fn job(_job: Job, _sender: Sender<Event>) {}
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -241,7 +240,7 @@ async fn main() -> Result<()> {
             debug!("Handling events");
             connection.handle().await?;
         }
-        Command::Build(options) => {}
+        Command::Build(_options) => {}
     }
 
     Ok(())

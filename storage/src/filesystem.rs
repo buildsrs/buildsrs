@@ -1,3 +1,7 @@
+//! # Filesystem Storage
+//!
+//! This storage implementation uses the filesystem to store artifacts.
+
 use super::*;
 use std::{
     fmt::Debug,
@@ -44,7 +48,7 @@ impl<P: AsRef<Path>> Filesystem<P> {
         version: &ArtifactId,
         data: &[u8],
     ) -> Result<(), FilesystemError> {
-        let path = self.artifact_path(&version);
+        let path = self.artifact_path(version);
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -79,13 +83,13 @@ impl<P: AsRef<Path>> Filesystem<P> {
 #[async_trait::async_trait]
 impl<P: AsRef<Path> + Send + Sync + Debug> Storage for Filesystem<P> {
     async fn artifact_put(&self, version: &ArtifactId, data: &[u8]) -> Result<(), StorageError> {
-        self.do_artifact_put(&version, data)
+        self.do_artifact_put(version, data)
             .await
             .map_err(|error| StorageError::Other(Arc::new(error)))
     }
 
     async fn artifact_get(&self, version: &ArtifactId) -> Result<ArtifactData, StorageError> {
-        let result = self.do_artifact_get(&version).await;
+        let result = self.do_artifact_get(version).await;
         match result {
             Ok(bytes) => Ok(ArtifactData::Data { bytes }),
             Err(error) if error.error.kind() == ErrorKind::NotFound => {

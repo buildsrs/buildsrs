@@ -69,4 +69,4 @@ format:
 # run formatting and style checks
 check:
     cargo +nightly fmt --check --all
-    cargo clippy --workspace --all-features
+    cargo clippy --workspace --all-features -- -D warnings

@@ -1,6 +1,3 @@
-use anyhow::Result;
-use clap::Parser;
-
 mod api;
 mod state;
 

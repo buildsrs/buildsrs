@@ -1,5 +1,5 @@
 use super::*;
-use std::{future::Future, pin::Pin, time::Duration};
+use std::{future::Future, pin::Pin};
 pub use test_strategy::proptest;
 
 /// Generic future used for cleanup tasks.
