@@ -1,11 +1,15 @@
 use anyhow::Result;
+use buildsrs_builder::StrategyOptions;
 use buildsrs_protocol::*;
 use clap::Parser;
 use duration_string::DurationString;
 use futures::{SinkExt, StreamExt};
+use reqwest::Client;
 use ssh_key::{HashAlg, PrivateKey};
 use std::path::PathBuf;
 use tokio::{
+    fs::File,
+    io::AsyncWriteExt,
     net::TcpStream,
     select,
     sync::mpsc::{channel, Receiver, Sender},
@@ -16,11 +20,16 @@ use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, Web
 use tracing::*;
 use url::Url;
 
+static BUILDER_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
 /// Default WebSocket endpoint.
 const DEFAULT_WEBSOCKET: &str = "wss://api.builds.rs/api/v1/jobs";
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug)]
 pub struct Options {
+    #[clap(flatten)]
+    pub strategy: StrategyOptions,
+
     /// Path to SSH private key.
     ///
     /// SSH private key is used for authentication and for artifact signing.
@@ -44,9 +53,15 @@ pub enum Command {
 /// Build a single crate.
 #[derive(Parser, Debug, Clone)]
 pub struct BuildCommand {
-    pub krate: Url,
+    /// Crate Url to build
+    #[clap(default_value = "https://static.crates.io/crates/ripgrep/ripgrep-13.0.0.crate")]
+    pub source: Url,
 
-    #[clap(long)]
+    /// Checksum to build
+    #[clap(
+        long,
+        default_value = "f37c9d2c2bc7e00bd2653e13771397b94e452583da9b9494eabef627618d64bf"
+    )]
     pub checksum: Option<String>,
 }
 
@@ -209,6 +224,8 @@ async fn main() -> Result<()> {
     let options = Options::parse();
     tracing_subscriber::fmt::init();
 
+    let client = Client::builder().user_agent(BUILDER_USER_AGENT).build()?;
+
     debug!("Reading private key from {:?}", options.private_key_file);
     let private_key = PrivateKey::read_openssh_file(&options.private_key_file)?;
     info!(
@@ -240,7 +257,47 @@ async fn main() -> Result<()> {
             debug!("Handling events");
             connection.handle().await?;
         }
-        Command::Build(_options) => {}
+        Command::Build(build) => {
+            let strategy = options.strategy.build().await?;
+            let dir = tempdir::TempDir::new("build")?;
+            println!("dir is {dir:?}");
+
+            let crate_file = client.get(build.source.as_str()).send().await?;
+            let mut stream = crate_file.bytes_stream();
+            let download_crate = dir.path().join("download.crate");
+            let download_folder = dir.path().join("output");
+
+            std::mem::forget(dir);
+            let mut file = File::create(&download_crate).await?;
+            while let Some(item) = stream.next().await {
+                file.write_all(&item?).await?;
+            }
+            file.flush().await?;
+
+            println!("Downloaded crate");
+
+            let download_folder_clone = download_folder.clone();
+            tokio::spawn(async move {
+                use flate2::read::GzDecoder;
+                use tar::Archive;
+                let file = std::fs::File::open(&download_crate)?;
+                std::fs::create_dir(&download_folder)?;
+                let tar = GzDecoder::new(file);
+                let mut archive = Archive::new(tar);
+                archive.unpack(download_folder)?;
+                Ok(()) as Result<()>
+            })
+            .await??;
+
+            println!("Extracted crate");
+
+            // find crate subfolder
+            let mut download_folder = tokio::fs::read_dir(&download_folder_clone).await?;
+            let download_folder = download_folder.next_entry().await?.unwrap().path();
+
+            let builder = strategy.builder_from_path(&download_folder).await?;
+            builder.metadata().await?;
+        }
     }
 
     Ok(())

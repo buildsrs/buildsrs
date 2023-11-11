@@ -44,11 +44,13 @@ variables:
         MINIO_ROOT_PASSWORD: password
         MINIO_DOMAIN: minio
       command: ["server", "/data"]
+    - name: docker:dind
   variables:
     DATABASE: "host=postgres user=postgres password=password"
     MINIO_ENDPOINT: http://minio:9000
     MINIO_USER: buildsrs
     MINIO_PASS: password
+    DOCKER_HOST: tcp://docker:2375
 
 .docker:
   stage: build
