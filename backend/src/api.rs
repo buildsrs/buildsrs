@@ -12,10 +12,12 @@ fn routes() -> Router<Backend> {
 }
 
 impl Backend {
+    /// Get router for REST API.
     pub fn router(&self) -> Router {
         routes().with_state(self.clone())
     }
 
+    /// Launch REST API, listening on the given address.
     pub async fn listen(&self, addr: SocketAddr) -> Result<()> {
         let router = self.router();
         Server::bind(&addr)

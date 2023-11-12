@@ -107,6 +107,7 @@ impl Connection {
 }
 
 impl Backend {
+    /// Handle jobs websocket connection.
     pub async fn handle_jobs(&self, mut websocket: WebSocket) -> Result<(), WebSocketError> {
         let fingerprint = extract_fingerprint(&mut websocket).await?;
         let uuid = self
