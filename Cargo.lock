@@ -1113,6 +1113,7 @@ dependencies = [
 name = "buildsrs-registry-sync"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "buildsrs-database",
  "clap",
  "crates-index",

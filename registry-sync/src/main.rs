@@ -1,8 +1,10 @@
+use anyhow::Result;
 use buildsrs_database::Database;
+use buildsrs_registry_sync::Syncer;
 use clap::Parser;
 use crates_index::GitIndex;
 use log::*;
-use std::{path::PathBuf, thread::sleep, time::Duration};
+use std::{path::PathBuf, time::Duration};
 use url::Url;
 
 #[derive(Parser, PartialEq, Clone, Debug)]
@@ -25,7 +27,7 @@ pub struct Options {
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
+async fn main() -> Result<()> {
     env_logger::init();
     let options = Options::parse();
 
@@ -33,26 +35,9 @@ async fn main() {
     let database = Database::connect(&options.database).await.unwrap();
 
     info!("Setting up registry index");
-    let mut index = GitIndex::with_path(&options.path, options.registry.as_str()).unwrap();
-    info!("Ready for syncing");
+    let index = GitIndex::with_path(&options.path, options.registry.as_str()).unwrap();
 
-    loop {
-        info!("Syncing crates");
-        for krate in index.crates() {
-            if let Some(krate) = index.crate_(krate.name()) {
-                database.crate_add(krate.name()).await.unwrap();
-                for version in krate.versions() {
-                    database
-                        .crate_version_add(krate.name(), version.version(), "", version.is_yanked())
-                        .await
-                        .unwrap();
-                }
-            }
-        }
+    let mut context = Syncer::new(database, index);
 
-        info!("Sleeping until next iteration");
-        sleep(options.interval);
-        info!("Updating index");
-        index.update().unwrap();
-    }
+    context.sync_loop(options.interval).await
 }
