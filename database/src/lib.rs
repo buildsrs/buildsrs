@@ -1,3 +1,9 @@
+//! # Buildsrs Database
+//!
+//! The buildsrs project uses a database to store metadata about crates, crate versions, and
+//! artifacts. The database that is used is the postgres database. This crate implements all
+//! database interactions in the shape of methods that can be consumed elsewhere in the project.
+
 use futures::Stream;
 use ssh_key::{HashAlg, PublicKey};
 use std::{collections::BTreeSet, pin::Pin, sync::Arc};
@@ -7,48 +13,14 @@ use uuid::Uuid;
 
 #[macro_use]
 mod macros;
+pub mod entity;
 #[cfg(any(feature = "temp", test))]
 mod temp;
 #[cfg(test)]
 mod tests;
 mod util;
 
-#[derive(Clone, Debug)]
-pub struct Builder {
-    pub uuid: Uuid,
-    pub public_key: PublicKey,
-    pub comment: String,
-    pub enabled: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct TargetInfo {
-    pub name: String,
-    pub enabled: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct CrateInfo {
-    pub name: String,
-    pub enabled: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct VersionInfo {
-    pub name: String,
-    pub version: String,
-    pub checksum: String,
-    pub yanked: bool,
-}
-
-#[derive(Clone, Debug)]
-pub struct JobInfo {
-    pub uuid: Uuid,
-    pub builder: Uuid,
-    pub name: String,
-    pub version: String,
-    pub target: String,
-}
+use entity::*;
 
 statements!(
     /// Register new builder by SSH pubkey and comment.

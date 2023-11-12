@@ -8,7 +8,7 @@ use axum::{
     routing::get,
     Router,
 };
-use buildsrs_database::{Builder, Error as DatabaseError};
+use buildsrs_database::{entity::Builder, Error as DatabaseError};
 use buildsrs_protocol::{ssh_key::Fingerprint, *};
 use futures::StreamExt;
 
