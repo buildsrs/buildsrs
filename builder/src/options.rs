@@ -9,6 +9,7 @@ enum StrategyName {
     Docker,
 }
 
+/// Command-line options for builder strategy.
 #[derive(Parser, PartialEq, Debug)]
 pub struct StrategyOptions {
     #[clap(long, default_value = "docker")]
@@ -20,6 +21,7 @@ pub struct StrategyOptions {
 }
 
 impl StrategyOptions {
+    /// Build strategy
     pub async fn build(&self) -> Result<DynStrategy> {
         let strategy: DynStrategy = match self.builder {
             #[cfg(feature = "docker")]

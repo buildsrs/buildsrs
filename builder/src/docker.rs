@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 #[cfg(feature = "options")]
 pub(crate) mod options;
 
+/// Build strategy that uses Docker.
 #[derive(Clone, Debug)]
 pub struct DockerStrategy {
     docker: Docker,
@@ -26,6 +27,7 @@ impl Strategy for DockerStrategy {
     }
 }
 
+/// Crate builder that uses Docker to execute Cargo commands.
 #[derive(Clone, Debug)]
 pub struct DockerBuilder {
     docker: Docker,
@@ -33,6 +35,7 @@ pub struct DockerBuilder {
 }
 
 impl DockerBuilder {
+    /// Create new Docker builer from Docker handle and path.
     pub fn new<P: Into<PathBuf>>(docker: Docker, path: P) -> Self {
         Self {
             docker,
@@ -40,14 +43,17 @@ impl DockerBuilder {
         }
     }
 
+    /// Get reference to Docker handle.
     pub fn docker(&self) -> &Docker {
         &self.docker
     }
 
+    /// Get path that this crate is extracted at.
     pub fn folder(&self) -> &Path {
         &self.folder
     }
 
+    /// Delete this crate.
     pub async fn delete(self) -> Result<()> {
         tokio::fs::remove_dir_all(&self.folder).await?;
         Ok(())
