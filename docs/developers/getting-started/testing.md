@@ -10,6 +10,24 @@ are necessary, and using coverage reporting to measure how the test coverage
 changes over time. All new features should come with matching tests, if
 possible.
 
+## Services
+
+In order to be able to run the tests, you must first launch the required services.
+You can launch them using the `services` command:
+
+```
+# launch services
+just services
+```
+
+If you want to tear them down and delete any state, you can use this command
+with the `down` subcommand, like this:
+
+```
+# delete services
+just services down
+```
+
 ### Testing
 
 There are two targets that are useful for running tests. Both of these targets

@@ -15,6 +15,7 @@ cannot.
 
 - [cargo-llvm-cov][cargo-llvm-cov]: Optional, used to determine test coverage.
 - [mdbook][mdbook]: Optional, used to build documentation.
+- [mdbook-mermaid][mdbook-mermaid]: Optional, used to build documentation.
 
 Here are explanations for what each tool does and a quick guide to getting it
 installed.
@@ -54,6 +55,9 @@ The easiest way to test if this works is by heading to the [Trunk](#trunk)
 section, and installing and testing it by building the frontend.
 
 ## Trunk
+
+> Installing Trunk is not required, you only need it if you want to build and
+> run the frontend locally.
 
 [Trunk][trunk] is a tool that helps with building Rust WebAssembly frontends.
 It wraps around `cargo` for building the WebAssembly and bundles the resulting
@@ -163,9 +167,15 @@ If this runs without producing errors, then you know that the tool is properly i
 
 ## mdBook
 
+> Installing mdBook is not required, it is only needed if you want to build
+> the documentation locally.
+
 [mdBook][mdbook] is a tool used to build the documentation for build.rs. It
 takes as input the markdown files found in the `docs/` folder of the
 repository, and produces this nice documentation page.
+
+We also use the [mdBook Mermaid][mdbook-mermaid] plugin to render those pretty
+diagrams.
 
 If you want to work on improving the documentation, it is recommended that you
 install this locally so you can render the documentation.
@@ -173,7 +183,7 @@ install this locally so you can render the documentation.
 You can install it using `cargo` by running this command:
 
 ```
-cargo install mdbook
+cargo install mdbook mdbook-mermaid
 ```
 
 You can verify that it does work by building the documentation locally, like
@@ -201,3 +211,4 @@ documentation or document common issues here.
 [yew]: https://yew.rs/
 [cargo-llvm-cov]: https://github.com/taiki-e/cargo-llvm-cov
 [mdbook]: https://github.com/rust-lang/mdBook
+[mdbook-mermaid]: https://github.com/badboy/mdbook-mermaid

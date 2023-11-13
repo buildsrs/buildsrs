@@ -1,21 +1,43 @@
 # Builds.rs Documentation
 
-The [builds.rs]() service is built by a team of people who are passionate about
-all things Rust. Specifically, we believe that the Rust community has produced
-an exceptional quality of tooling, and we want to do our little part in making
-this tooling available to the massses.  For that reason, we try to create
-working binary builds for all crates published on [crates.io]().
+[builds.rs][] is a service that builds artifacts for all crates published at
+[crates.io][], the Rust community's crate registry.  [builds.rs][] takes all
+crates published there and generates artifacts from them, such as executables
+for different platforms. This makes it easy to use Rust tooling without needing
+to compile it from source.
 
 <center>
 <img src="builder.svg" width="150" />
 </center>
 
+[builds.rs][] is written, run and maintained by a team of volunteers who are
+passionate about the Rust language and the quality of tooling it has provided.
+We want to do our little part in making this tooling available to as many
+people as possible.
+
 ### Sections
 
-**[Summary](summary.md)**
+This guide is split up into different sections for the different target
+audiences that might read this guide. We recommend reading these sections
+in the order that they are presented.
 
-Summarizes what [builds.rs]() is and how it works.
+**[Users](summary.md)**
+
+This section is for people that want to use [builds.rs][], for example to
+download artifacts for Rust crates. It summarizes what [builds.rs][] does, how
+it works, and how you can use it.
+
+**[Crate Authors](authors)**
+
+This section is for crate authors that would like to customize how
+[builds.rs][] builds their crates. As a crate author, you can add metadata to
+your crate's manifest that controls how your crate is built.
 
 **[Developers](developers.md)**
 
-Explains how you, as a crate developer, can add metadat to your crate that allows [builds.rs]() to build better releases for you.
+This section is for anyone who would like to help maintain [builds.rs][]. It
+explains how the project is structured, how you can run and test it locally,
+and what you need to keep in mind when creating merge requests.
+
+[builds.rs]: https://builds.rs
+[crates.io]: https://crates.io

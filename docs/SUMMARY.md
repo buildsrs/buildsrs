@@ -2,20 +2,31 @@
 
 [Introduction](introduction.md)
 
-# Summary
+# Users
 
-- [Overview](./chapter_1.md)
+- [Introduction](./users/intro.md)
+- [Cargo-Builds](./users/cargo-builds.md)
+- [API](./users/api.md)
 
 # Crate Authors
 
-- [Configuration]()
+- [Introduction](./authors/intro.md)
+- [Customize](./authors/customize.md)
+    - [Metadata](./authors/metadata.md)
+    - [Testing](./authors/local.md)
 
 # Developers
 
-- [Overview](./developers/overview.md)
-    - [Architecture](./developers/overview/architecture.md)
-    - [Components](./developers/overview/components.md)
+- [Components](./developers/components.md)
+    - [Frontend](./developers/components/frontend.md)
+    - [Backend](./developers/components/backend.md)
+    - [Builder](./developers/components/builder.md)
+    - [Registry Sync](./developers/components/registry-sync.md)
+    - [Storage](./developers/components/storage.md)
+    - [Database](./developers/components/database.md)
+- [Protocols]()
     - [Builder Protocol](./developers/overview/protocol.md)
+    - [Backend API]()
 - [Getting Started](./developers/getting-started.md)
     - [Prerequisites](./developers/getting-started/prerequisites.md)
     - [Justfile](./developers/getting-started/justfile.md)
