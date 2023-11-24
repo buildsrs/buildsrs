@@ -10,6 +10,15 @@ use std::{
 };
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
+#[cfg(any(test, feature = "temp"))]
+mod temp;
+
+#[cfg(feature = "options")]
+mod options;
+
+#[cfg(feature = "options")]
+pub(crate) use options::FilesystemOptions;
+
 /// Filesystem-backed storage for artifacts.
 #[derive(Clone, Debug)]
 pub struct Filesystem<P: AsRef<Path> = PathBuf> {
@@ -97,105 +106,5 @@ impl<P: AsRef<Path> + Send + Sync + Debug> Storage for Filesystem<P> {
             }
             Err(error) => Err(StorageError::Other(Arc::new(error))),
         }
-    }
-}
-
-#[cfg(any(feature = "options", test))]
-mod options {
-    use super::*;
-    use clap::Args;
-    use std::path::PathBuf;
-
-    #[derive(Args, Clone, Debug)]
-    pub struct FilesystemOptions {
-        #[clap(long, env, required_if_eq("storage", "filesystem"))]
-        storage_filesystem_path: Option<PathBuf>,
-    }
-
-    impl FilesystemOptions {
-        pub async fn build(&self) -> Filesystem {
-            Filesystem::new(self.storage_filesystem_path.clone().unwrap())
-        }
-    }
-}
-
-#[cfg(any(feature = "options", test))]
-pub(crate) use options::FilesystemOptions;
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-    use crate::tests::*;
-    use std::error::Error;
-    use tempdir::TempDir;
-
-    /// Create a temporary filesystem storage.
-    pub async fn temp_filesystem() -> (Filesystem, Cleanup) {
-        let dir = TempDir::new("storage").unwrap();
-        let storage = Filesystem::new(dir.path().to_path_buf());
-        let cleanup = async move {
-            dir.close().unwrap();
-        };
-        (storage, Box::pin(cleanup))
-    }
-
-    #[proptest(async = "tokio")]
-    async fn can_write_artifact(version: ArtifactId, contents: Vec<u8>) {
-        with(temp_filesystem, |storage| async move {
-            storage.artifact_put(&version, &contents).await.unwrap();
-
-            let path = storage.path().join(version.file_name());
-            let found = tokio::fs::read(&path).await.unwrap();
-            assert_eq!(found, contents);
-        })
-        .await;
-    }
-
-    #[proptest(async = "tokio")]
-    async fn can_write_artifact_existing(
-        version: ArtifactId,
-        previous: Vec<u8>,
-        contents: Vec<u8>,
-    ) {
-        with(temp_filesystem, |storage| async move {
-            let path = storage.path().join(version.file_name());
-            tokio::fs::write(&path, &previous).await.unwrap();
-
-            storage.artifact_put(&version, &contents).await.unwrap();
-
-            let found = tokio::fs::read(&path).await.unwrap();
-            assert_eq!(found, contents);
-        })
-        .await;
-    }
-
-    #[proptest(async = "tokio")]
-    async fn cannot_read_artifact_missing(version: ArtifactId) {
-        with(temp_filesystem, |storage| async move {
-            let path = storage.path().join(version.file_name());
-
-            let error = storage.artifact_get(&version).await.err().unwrap();
-
-            assert!(matches!(error, StorageError::NotFound(_)));
-            assert_eq!(error.to_string(), format!("artifact not found"));
-            assert_eq!(
-                error.source().unwrap().to_string(),
-                format!("error writing to {path:?}")
-            );
-        })
-        .await;
-    }
-
-    #[proptest(async = "tokio")]
-    async fn can_read_artifact(version: ArtifactId, contents: Vec<u8>) {
-        with(temp_filesystem, |storage| async move {
-            let path = storage.path().join(version.file_name());
-            tokio::fs::write(&path, &contents).await.unwrap();
-
-            let found = storage.artifact_get(&version).await.unwrap();
-
-            assert_eq!(&found.bytes().unwrap()[..], &contents);
-        })
-        .await;
     }
 }

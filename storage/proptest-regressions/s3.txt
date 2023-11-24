@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 03179f0f18b993fc090b06ea0626b6318e355edf1482adf69e516cc5b148cc4e # shrinks to input = _CanReadArtifactArgs { version: ArtifactId { krate: "aaaaaaaaaaakeqhmwsns", version: "quuwowarpupjfdqnkgmt", target: "yyaqucqvuuvnkgqivchb", kind: Tarball }, contents: [59, 48, 107, 168, 78, 39, 165, 90, 111, 124, 46, 202, 134, 116, 227, 153, 94, 255, 122, 207, 144, 25, 69, 146, 88, 151, 205, 210, 167, 215, 185, 16, 127, 72, 38, 70, 132, 159] }

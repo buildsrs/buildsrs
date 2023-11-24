@@ -19,6 +19,8 @@ test-strategy.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = [] }
 url.workspace = true
+tempdir = { version = "0.3.7", optional = true }
+rand = { version = "0.8.5", optional = true }
 
 [dev-dependencies]
 test-strategy.workspace = true
@@ -33,4 +35,8 @@ s3 = ["dep:aws-credential-types", "dep:aws-sdk-s3", "dep:aws-types", "dep:aws-co
 filesystem = ["tokio/fs", "tokio/io-util"]
 cache = ["dep:moka"]
 options = ["dep:clap"]
-temp = []
+temp = ["dep:tempdir", "dep:rand"]
+
+[[test]]
+name = "temp"
+required-features = ["temp"]

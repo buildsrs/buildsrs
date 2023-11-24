@@ -14,14 +14,17 @@ use url::Url;
 /// Shared generic error.
 pub type SharedError = Arc<dyn Error + Send + Sync>;
 
+#[cfg(any(test, feature = "temp"))]
+mod temp;
+#[cfg(any(test, feature = "temp"))]
+pub use temp::*;
+
 #[cfg(feature = "cache")]
 mod cache;
 #[cfg(feature = "filesystem")]
 mod filesystem;
 #[cfg(feature = "s3")]
 mod s3;
-#[cfg(test)]
-pub mod tests;
 
 #[cfg(feature = "cache")]
 pub use cache::{Cache, CacheConfig};
