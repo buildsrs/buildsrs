@@ -108,21 +108,33 @@ backend:
   extends: [".docker"]
   variables:
     FOLDER: backend
+  only:
+    - main
+    - prod
 
 migrate:
   extends: [".docker"]
   variables:
     FOLDER: database
+  only:
+    - main
+    - prod
 
 builder:
   extends: [".docker"]
   variables:
     FOLDER: builder
+  only:
+    - main
+    - prod
 
 registry-sync:
   extends: [".docker"]
   variables:
     FOLDER: registry-sync
+  only:
+    - main
+    - prod
 
 frontend:
   stage: build
@@ -134,6 +146,9 @@ frontend:
   artifacts:
     paths:
       - frontend/dist
+  only:
+    - main
+    - prod
 
 book:
   stage: build
