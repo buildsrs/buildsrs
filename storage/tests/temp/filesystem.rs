@@ -1,16 +1,10 @@
 use super::*;
-use buildsrs_storage::*;
 use std::error::Error;
 use test_strategy::proptest;
 
-/// Create a temporary filesystem storage.
-pub async fn temp_filesystem() -> Temporary<Filesystem> {
-    Filesystem::new_temp().await
-}
-
 #[proptest(async = "tokio")]
 async fn can_write_artifact(version: ArtifactId, contents: Vec<u8>) {
-    with(temp_filesystem, |storage| async move {
+    with(Filesystem::new_temp, |storage| async move {
         storage.artifact_put(&version, &contents).await.unwrap();
 
         let path = storage.path().join(version.file_name());
@@ -22,7 +16,7 @@ async fn can_write_artifact(version: ArtifactId, contents: Vec<u8>) {
 
 #[proptest(async = "tokio")]
 async fn can_write_artifact_existing(version: ArtifactId, previous: Vec<u8>, contents: Vec<u8>) {
-    with(temp_filesystem, |storage| async move {
+    with(Filesystem::new_temp, |storage| async move {
         let path = storage.path().join(version.file_name());
         tokio::fs::write(&path, &previous).await.unwrap();
 
@@ -36,7 +30,7 @@ async fn can_write_artifact_existing(version: ArtifactId, previous: Vec<u8>, con
 
 #[proptest(async = "tokio")]
 async fn cannot_read_artifact_missing(version: ArtifactId) {
-    with(temp_filesystem, |storage| async move {
+    with(Filesystem::new_temp, |storage| async move {
         let path = storage.path().join(version.file_name());
 
         let error = storage.artifact_get(&version).await.err().unwrap();
@@ -53,7 +47,7 @@ async fn cannot_read_artifact_missing(version: ArtifactId) {
 
 #[proptest(async = "tokio")]
 async fn can_read_artifact(version: ArtifactId, contents: Vec<u8>) {
-    with(temp_filesystem, |storage| async move {
+    with(Filesystem::new_temp, |storage| async move {
         let path = storage.path().join(version.file_name());
         tokio::fs::write(&path, &contents).await.unwrap();
 

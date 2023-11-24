@@ -1,17 +1,11 @@
 use super::*;
 use aws_sdk_s3::primitives::{ByteStream, SdkBody};
-use buildsrs_storage::*;
 use std::error::Error;
 use test_strategy::proptest;
 
-/// Create test client for S3.
-pub async fn temp_s3() -> Temporary<S3> {
-    S3::new_temp().await
-}
-
 #[proptest(async = "tokio", cases = 10)]
 async fn can_write_artifact(version: ArtifactId, contents: Vec<u8>) {
-    with(temp_s3, |storage| async move {
+    with(S3::new_temp, |storage| async move {
         // write artifact using trait
         storage.artifact_put(&version, &contents).await.unwrap();
 
@@ -32,7 +26,7 @@ async fn can_write_artifact(version: ArtifactId, contents: Vec<u8>) {
 
 #[proptest(async = "tokio", cases = 10)]
 async fn can_write_artifact_existing(version: ArtifactId, previous: Vec<u8>, contents: Vec<u8>) {
-    with(temp_s3, |storage| async move {
+    with(S3::new_temp, |storage| async move {
         // put an object into storage manually
         storage
             .client()
@@ -64,7 +58,7 @@ async fn can_write_artifact_existing(version: ArtifactId, previous: Vec<u8>, con
 
 #[proptest(async = "tokio", cases = 10)]
 async fn cannot_read_artifact_missing(version: ArtifactId) {
-    with(temp_s3, |storage| async move {
+    with(S3::new_temp, |storage| async move {
         // read a non-existing artifact
         let error = storage.artifact_get(&version).await.err().unwrap();
 
@@ -81,7 +75,7 @@ async fn cannot_read_artifact_missing(version: ArtifactId) {
 
 #[proptest(async = "tokio", cases = 10)]
 async fn can_read_artifact(version: ArtifactId, contents: Vec<u8>) {
-    with(temp_s3, |storage| async move {
+    with(S3::new_temp, |storage| async move {
         // put an object into storage manually
         storage
             .client()
