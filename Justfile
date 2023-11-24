@@ -36,7 +36,7 @@ database-cli *COMMAND:
 
 # run unit tests for CRATE only
 test-crate CRATE *ARGS:
-    DATABASE="{{postgres_str}}" cargo test -p buildsrs-{{CRATE}} --all-features {{ARGS}}
+    {{services_env}} cargo test -p buildsrs-{{CRATE}} --all-features {{ARGS}}
 
 # run all unit tests
 test FILTER='':
