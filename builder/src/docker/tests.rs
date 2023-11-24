@@ -1,6 +1,5 @@
 use super::*;
 use docker_api::opts::PullOpts;
-use tempdir::TempDir;
 
 #[tokio::test]
 async fn test_metadata() {
