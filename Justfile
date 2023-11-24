@@ -30,17 +30,17 @@ database-repl DATABASE:
 database-dump NAME='latest' DATABASE='postgres':
     docker compose exec database pg_dump -U postgres -d {{DATABASE}} --inserts | xz > database/dumps/{{NAME}}.sql.xz
 
-# test database
-database-test:
-    DATABASE="{{postgres_str}}" cargo test -p buildsrs-database --all-features
-
 # run database cli
 database-cli *COMMAND:
     cargo run -p buildsrs-database --features tools -- --database "{{postgres_str}}" {{COMMAND}}
 
+# run unit tests for CRATE only
+test-crate CRATE *ARGS:
+    DATABASE="{{postgres_str}}" cargo test -p buildsrs-{{CRATE}} --all-features {{ARGS}}
+
 # run all unit tests
-test filter='':
-    {{services_env}} cargo test --all-features {{filter}}
+test FILTER='':
+    {{services_env}} cargo test --all-features {{FILTER}}
 
 # generate test coverage report
 coverage:
