@@ -11,6 +11,8 @@ storage_pass := "password"
 storage_port := "9000"
 storage_env := "MINIO_ENDPOINT=" + storage_endpoint + " MINIO_USER=" + storage_user + " MINIO_PASS=" + storage_pass
 
+docker_image := "registry.gitlab.com/buildsrs/buildsrs"
+
 # environment for services
 services_env := postgres_env + " " + storage_env
 
@@ -70,3 +72,21 @@ format:
 check:
     cargo +nightly fmt --check --all
     cargo clippy --workspace --all-features -- -D warnings
+
+# run tasks similar to what the CI runs
+ci:
+    just check
+    just test
+    just docker-build-all
+
+# build docker container of the given component
+docker-build COMPONENT:
+    docker build . -f {{COMPONENT}}/Dockerfile -t {{docker_image}}/{{COMPONENT}}
+
+# build all docker containers
+docker-build-all:
+    just docker-build backend
+    just docker-build registry-sync
+    just docker-build builder
+    just docker-build database
+
