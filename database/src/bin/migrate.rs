@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use buildsrs_database::{migrations, Database, Transaction};
 use clap::Parser;
 use ssh_key::{HashAlg, PublicKey};

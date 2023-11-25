@@ -18,7 +18,7 @@ async fn delete_bucket(client: Client, bucket: String) {
         .unwrap();
 
     let mut delete_objects: Vec<ObjectIdentifier> = vec![];
-    for obj in objects.contents().iter() {
+    for obj in objects.contents() {
         let obj_id = ObjectIdentifier::builder()
             .set_key(Some(obj.key().unwrap().to_string()))
             .build()

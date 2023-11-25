@@ -40,3 +40,6 @@ temp = ["dep:tempdir", "dep:rand"]
 [[test]]
 name = "temp"
 required-features = ["temp"]
+
+[lints]
+workspace = true

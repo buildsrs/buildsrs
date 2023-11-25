@@ -31,3 +31,6 @@ tools = ["migrations", "dep:clap"]
 [[bin]]
 name = "migrate"
 required-features = ["tools"]
+
+[lints]
+workspace = true

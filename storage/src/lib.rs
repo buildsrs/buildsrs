@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! # Buildsrs Storage
 //!
 //! This crate defines the [`Storage`] trait, which is used by the backend to store artifacts.
@@ -46,7 +44,7 @@ pub enum StorageError {
 }
 
 /// Kind of artifact.
-#[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub enum ArtifactKind {
     /// Tarball, with a `.tar.gz` extension.
     Manifest,
@@ -119,7 +117,7 @@ impl ArtifactData {
     pub fn bytes(&self) -> Option<&Bytes> {
         match self {
             Self::Data { bytes } => Some(bytes),
-            _ => None,
+            Self::Redirect { .. } => None,
         }
     }
 }

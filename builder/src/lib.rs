@@ -5,8 +5,6 @@
 //! whichever strategy it is configured to use, by default it will use Docker. It streams the
 //! progress while the build is in progress, and finally signs and uploads the artifacts.
 
-#![warn(missing_docs)]
-
 use anyhow::Result;
 use async_trait::async_trait;
 use cargo_metadata::Metadata;

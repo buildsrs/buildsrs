@@ -1,7 +1,6 @@
 //! # Buildsrs Common
 //!
 //! Common types shared by the buildsrs project.
-#![warn(missing_docs)]
 
 use serde::{Deserialize, Serialize};
 use url::Url;

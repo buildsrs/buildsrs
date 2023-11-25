@@ -85,7 +85,7 @@ impl Expiry<ArtifactId, Entry> for CacheConfig {
         match value {
             Entry::Missing(_) => Some(self.timeout_missing),
             Entry::Data(ArtifactData::Redirect { validity, .. }) => Some(*validity),
-            _ => None,
+            Entry::Data(_) => None,
         }
     }
 }

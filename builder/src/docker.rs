@@ -88,7 +88,7 @@ impl Builder for DockerBuilder {
             match chunk? {
                 TtyChunk::StdErr(mut out) => stderr.append(&mut out),
                 TtyChunk::StdOut(mut out) => stdout.append(&mut out),
-                _ => {}
+                TtyChunk::StdIn(_) => {}
             }
         }
 

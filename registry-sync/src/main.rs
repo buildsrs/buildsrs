@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use anyhow::Result;
 use buildsrs_database::Database;
 use buildsrs_registry_sync::Syncer;

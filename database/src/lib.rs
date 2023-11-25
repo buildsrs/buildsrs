@@ -4,6 +4,8 @@
 //! artifacts. The database that is used is the postgres database. This crate implements all
 //! database interactions in the shape of methods that can be consumed elsewhere in the project.
 
+#![allow(missing_docs)]
+
 use futures::Stream;
 use ssh_key::{HashAlg, PublicKey};
 use std::{collections::BTreeSet, pin::Pin, sync::Arc};

@@ -15,9 +15,10 @@ variables:
   MDBOOK_MERMAID_VERSION: 0.12.6
   CARGO_LLVM_COV_VERSION: 0.5.36
   CARGO_HACK_VERSION: 0.6.13
+  RUST_VERSION: "1.74"
 
 .rust:
-  image: rust:1.73-bookworm
+  image: rust:$RUST_VERSION-bookworm
   variables:
     RUSTC_WRAPPER: /usr/local/bin/sccache
     SCCACHE_IDLE_TIMEOUT: "1200"
@@ -92,6 +93,7 @@ style:
     - rustup toolchain add nightly
     - rustup component add rustfmt --toolchain nightly
     - rustup component add clippy
+    - cargo +nightly fmt --version
     - cargo +nightly fmt --check --all
     - cargo clippy --workspace --all-features -- -D warnings
 

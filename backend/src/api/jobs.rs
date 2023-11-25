@@ -77,10 +77,13 @@ impl Connection {
         loop {
             let message = self.recv().await?;
             match message {
-                ClientMessage::ChallengeResponse(response) => match challenge == response {
-                    true => return Ok(()),
-                    false => return Err(WebSocketError::ChallengeError),
-                },
+                ClientMessage::ChallengeResponse(response) => {
+                    return if challenge == response {
+                        Ok(())
+                    } else {
+                        Err(WebSocketError::ChallengeError)
+                    }
+                }
                 _ => continue,
             }
         }
@@ -96,8 +99,7 @@ impl Connection {
     async fn handle(&mut self) -> Result<(), WebSocketError> {
         loop {
             let response = match self.recv().await? {
-                ClientMessage::Hello(_) => break,
-                ClientMessage::ChallengeResponse(_) => break,
+                ClientMessage::Hello(_) | ClientMessage::ChallengeResponse(_) => break,
                 ClientMessage::JobRequest(request) => self.handle_job_request(&request).await?,
             };
             self.send(response).await?;

@@ -1,4 +1,4 @@
-FROM rust:1.71-bookworm AS builder
+FROM rust:1.74-bookworm AS builder
 
 # build
 COPY . /code

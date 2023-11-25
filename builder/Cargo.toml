@@ -36,3 +36,6 @@ cargo_metadata = "0.18.1"
 default = ["docker", "options"]
 docker = []
 options = ["dep:clap"]
+
+[lints]
+workspace = true

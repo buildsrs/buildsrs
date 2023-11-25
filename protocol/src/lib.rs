@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 //! # Buildsrs Protocol
 //!
 //! This crate supplies the necessary primitives that defined the protocol between the builder

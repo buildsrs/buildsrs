@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 use anyhow::Result;
 use buildsrs_builder::StrategyOptions;
 use buildsrs_protocol::*;
@@ -22,7 +23,7 @@ use url::Url;
 
 static BUILDER_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-/// Default WebSocket endpoint.
+/// Default [`WebSocket`] endpoint.
 const DEFAULT_WEBSOCKET: &str = "wss://api.builds.rs/api/v1/jobs";
 
 #[derive(Parser, Debug)]
@@ -85,10 +86,12 @@ pub struct ConnectCommand {
     pub parallel: usize,
 }
 
-/// WebSocket connection type alias.
+/// [`WebSocketStream`] connection type alias.
 type WebSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
-pub enum Event {}
+pub enum Event {
+    Build(String),
+}
 
 pub struct Connection {
     /// Private key, used for authentication and artifact signing.
@@ -106,7 +109,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    /// Connect to WebSocket endpoint.
+    /// Connect to [`WebSocket`] endpoint.
     pub async fn connect(private_key: PrivateKey, url: &Url) -> Result<Self> {
         let (websocket, _) = connect_async(url.as_str()).await?;
         Ok(Self::new(websocket, private_key))
@@ -125,7 +128,7 @@ impl Connection {
         }
     }
 
-    /// Send a signed ClientMessage.
+    /// Send a signed [`ClientMessage`].
     pub async fn send(&mut self, message: ClientMessage) -> Result<()> {
         let signed = SignedMessage::new(&self.private_key, message)?;
         let json = serde_json::to_string(&signed)?;
@@ -133,7 +136,7 @@ impl Connection {
         Ok(())
     }
 
-    /// Receive a ServerMessage.
+    /// Receive a [`ServerMessage`].
     pub async fn recv(websocket: &mut WebSocket) -> Result<ServerMessage> {
         loop {
             match websocket.next().await {
@@ -198,7 +201,7 @@ impl Connection {
     fn handle_message(&mut self, message: ServerMessage) {
         match message {
             ServerMessage::JobList(jobs) => {
-                for job in jobs.into_iter() {
+                for job in jobs {
                     self.handle_job(job);
                 }
             }

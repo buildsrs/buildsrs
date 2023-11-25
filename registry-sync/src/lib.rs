@@ -11,7 +11,6 @@
 //!
 //! This crate exports a [`Syncer`] type, which implements the synchronization between a given
 //! Git index and a database connection.
-#![warn(missing_docs)]
 
 use anyhow::Result;
 use buildsrs_database::Database;
@@ -27,7 +26,7 @@ pub struct Syncer {
 }
 
 impl Syncer {
-    /// Create new instance, given a database connection and a GitIndex.
+    /// Create new instance, given a database connection and a [`GitIndex`].
     pub fn new(database: Database, index: GitIndex) -> Self {
         Self { database, index }
     }
