@@ -42,9 +42,17 @@ impl Syncer {
                 self.database.crate_add(krate.name()).await?;
                 for version in krate.versions() {
                     self.database
-                        .crate_version_add(krate.name(), version.version(), "", version.is_yanked())
+                        .crate_version_add(
+                            krate.name(),
+                            version.version(),
+                            &hex::encode(version.checksum()),
+                            version.is_yanked(),
+                        )
                         .await?;
                 }
+                self.database
+                    .tasks_create_all("metadata", "generic")
+                    .await?;
             }
         }
         Ok(())

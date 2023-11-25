@@ -3,6 +3,7 @@
 //! This module defines entites that are stored in the database.
 
 use ssh_key::PublicKey;
+use strum::EnumString;
 use uuid::Uuid;
 
 /// Builder that is registered in the database
@@ -44,5 +45,22 @@ pub struct JobInfo {
     pub builder: Uuid,
     pub name: String,
     pub version: String,
-    pub target: String,
+    pub triple: String,
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum Kind {
+    Metadata,
+    Tarball,
+    Debian,
+    Coverage,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Task {
+    pub krate: String,
+    pub version: String,
+    pub triple: String,
+    pub kind: Kind,
 }

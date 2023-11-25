@@ -1,13 +1,4 @@
 #![allow(dead_code)]
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-/// Generate a random alphanumeric string of a given length.
-pub fn random_alphanumeric(length: usize) -> String {
-    let mut rng = thread_rng();
-    (0..length)
-        .map(|_| rng.sample(Alphanumeric) as char)
-        .collect()
-}
 
 /// Generate SQL to call a stored procedure with the given amount of parameters.
 pub fn sql_call(name: &str, count: usize) -> String {

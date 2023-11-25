@@ -7,10 +7,11 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+async-trait.workspace = true
 clap = { workspace = true, features = ["derive", "env"], optional = true }
 futures.workspace = true
 postgres-types = { version = "0.2.6", features = ["derive"] }
-rand = "0.8.5"
+rand = { version = "0.8.5", optional = true }
 refinery = { version = "=0.8.9", features = ["tokio-postgres"], optional = true }
 ssh-key = { workspace = true, features = ["ed25519"] }
 strum = { version = "0.24.1", features = ["derive"] }
@@ -21,16 +22,22 @@ uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
 lzma-rs = "0.3.0"
+rand = { version = "0.8.5" }
 rand_core.workspace = true
 refinery = { version = "=0.8.9", features = ["tokio-postgres"] }
 
 [features]
 migrations = ["dep:refinery"]
 tools = ["migrations", "dep:clap"]
+temp = ["migrations", "dep:rand"]
 
 [[bin]]
 name = "migrate"
 required-features = ["tools"]
+
+[[test]]
+name = "postgres"
+required-features = ["temp"]
 
 [lints]
 workspace = true

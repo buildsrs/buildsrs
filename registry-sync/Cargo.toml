@@ -15,6 +15,7 @@ url.workspace = true
 tokio.workspace = true
 buildsrs-database.workspace = true
 anyhow.workspace = true
+hex = "0.4.3"
 
 [lints]
 workspace = true

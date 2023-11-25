@@ -13,11 +13,11 @@ fn random_database_name(length: usize) -> String {
 ///
 /// This is used to generate a temporary database during testing.
 pub struct TempDatabase {
-    outer_client: Client,
-    inner_handle: JoinHandle<Result<(), Error>>,
-    outer_handle: JoinHandle<Result<(), Error>>,
     database_name: String,
+    inner_handle: JoinHandle<Result<(), Error>>,
     inner_host: String,
+    outer_client: Client,
+    outer_handle: JoinHandle<Result<(), Error>>,
 }
 
 impl TempDatabase {
@@ -41,7 +41,7 @@ impl TempDatabase {
             .await?;
 
         // connect to new, empty database
-        let inner_host = format!("{} dbname={}", database, database_name);
+        let inner_host = format!("{database} dbname={database_name}");
         let (mut inner_client, inner_connection) = connect(&inner_host, NoTls).await.unwrap();
         let inner_handle = tokio::spawn(inner_connection);
 
@@ -65,11 +65,11 @@ impl TempDatabase {
 
         Ok((
             TempDatabase {
-                inner_host,
-                outer_handle,
-                outer_client,
-                inner_handle,
                 database_name,
+                inner_handle,
+                inner_host,
+                outer_client,
+                outer_handle,
             },
             database,
         ))
@@ -78,10 +78,10 @@ impl TempDatabase {
     /// Delete temporary database.
     pub async fn delete(self) -> Result<(), Error> {
         let Self {
+            database_name,
             inner_handle,
             outer_client,
             outer_handle,
-            database_name,
             ..
         } = self;
         inner_handle.await.unwrap().unwrap();

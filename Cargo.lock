@@ -1073,6 +1073,7 @@ dependencies = [
 name = "buildsrs-database"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "clap",
  "futures",
  "lzma-rs",
@@ -1118,6 +1119,7 @@ dependencies = [
  "clap",
  "crates-index",
  "env_logger",
+ "hex",
  "humantime",
  "log",
  "tokio",

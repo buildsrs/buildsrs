@@ -1,4 +1,7 @@
-use crate::{temp::TempDatabase, Database};
+use buildsrs_database::{
+    entity::{Kind, Task},
+    Database, TempDatabase,
+};
 use rand_core::OsRng;
 use ssh_key::{Algorithm, HashAlg, PrivateKey};
 use std::future::Future;
@@ -67,6 +70,34 @@ async fn can_add_crate_version() {
         assert_eq!(info.version, version);
         assert_eq!(info.checksum, "abcdef");
         assert!(!info.yanked);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn can_add_crate_version_task() {
+    with_database(|database: Database| async move {
+        let name = "serde";
+        let version = "0.1.0";
+        database.crate_add(name).await.unwrap();
+        database
+            .crate_version_add(name, version, "abcdef", false)
+            .await
+            .unwrap();
+        database
+            .tasks_create_all("metadata", "generic")
+            .await
+            .unwrap();
+        let tasks = database.task_list(None, None, None, None).await.unwrap();
+        assert_eq!(
+            tasks,
+            [Task {
+                krate: name.into(),
+                version: version.into(),
+                kind: Kind::Metadata,
+                triple: "generic".into(),
+            }]
+        );
     })
     .await;
 }
@@ -196,11 +227,11 @@ async fn can_set_builder_enabled() {
 }
 
 #[tokio::test]
-async fn can_add_builder_target() {
+async fn can_add_builder_triple() {
     with_database(|mut database: Database| async move {
         let private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519).unwrap();
         let uuid = Uuid::new_v4();
-        let target = "x86_64-unknown-unknown";
+        let triple = "x86_64-unknown-unknown";
 
         let transaction = database.transaction().await.unwrap();
         transaction
@@ -209,21 +240,21 @@ async fn can_add_builder_target() {
             .unwrap();
         transaction.commit().await.unwrap();
 
-        database.target_add(target).await.unwrap();
-        database.builder_target_add(uuid, target).await.unwrap();
+        database.triple_add(triple).await.unwrap();
+        database.builder_triple_add(uuid, triple).await.unwrap();
 
-        let targets = database.builder_targets(uuid).await.unwrap();
-        assert!(targets.contains(target));
+        let triples = database.builder_triples(uuid).await.unwrap();
+        assert!(triples.contains(triple));
     })
     .await;
 }
 
 #[tokio::test]
-async fn can_remove_builder_target() {
+async fn can_remove_builder_triple() {
     with_database(|mut database: Database| async move {
         let private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519).unwrap();
         let uuid = Uuid::new_v4();
-        let target = "x86_64-unknown-unknown";
+        let triple = "x86_64-unknown-unknown";
 
         let transaction = database.transaction().await.unwrap();
         transaction
@@ -232,22 +263,22 @@ async fn can_remove_builder_target() {
             .unwrap();
         transaction.commit().await.unwrap();
 
-        database.target_add(target).await.unwrap();
-        database.builder_target_add(uuid, target).await.unwrap();
+        database.triple_add(triple).await.unwrap();
+        database.builder_triple_add(uuid, triple).await.unwrap();
 
-        let targets = database.builder_targets(uuid).await.unwrap();
-        assert!(targets.contains(target));
+        let triples = database.builder_triples(uuid).await.unwrap();
+        assert!(triples.contains(triple));
 
-        database.builder_target_remove(uuid, target).await.unwrap();
+        database.builder_triple_remove(uuid, triple).await.unwrap();
 
-        let targets = database.builder_targets(uuid).await.unwrap();
-        assert!(!targets.contains(target));
+        let triples = database.builder_triples(uuid).await.unwrap();
+        assert!(!triples.contains(triple));
     })
     .await;
 }
 
 #[tokio::test]
-async fn can_list_builder_target() {
+async fn can_list_builder_triple() {
     with_database(|mut database: Database| async move {
         let private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519).unwrap();
         let uuid = Uuid::new_v4();
@@ -260,43 +291,43 @@ async fn can_list_builder_target() {
         transaction.commit().await.unwrap();
 
         // defaults to empty
-        let targets = database.builder_targets(uuid).await.unwrap();
-        assert!(targets.is_empty());
+        let triples = database.builder_triples(uuid).await.unwrap();
+        assert!(triples.is_empty());
 
-        let targets = ["x86_64-unknown-unknown", "arm64-unknown-unknown"];
+        let triples = ["x86_64-unknown-unknown", "arm64-unknown-unknown"];
 
-        for target in targets {
-            database.target_add(target).await.unwrap();
-            database.builder_target_add(uuid, target).await.unwrap();
-            let targets = database.builder_targets(uuid).await.unwrap();
-            assert!(targets.contains(target));
+        for triple in triples {
+            database.triple_add(triple).await.unwrap();
+            database.builder_triple_add(uuid, triple).await.unwrap();
+            let triples = database.builder_triples(uuid).await.unwrap();
+            assert!(triples.contains(triple));
         }
     })
     .await;
 }
 
 #[tokio::test]
-async fn can_target_add() {
+async fn can_triple_add() {
     with_database(|database: Database| async move {
-        let target = "x86_64-unknown-unknown";
-        database.target_add(target).await.unwrap();
-        let info = database.target_info(target).await.unwrap();
-        assert_eq!(info.name, target);
+        let triple = "x86_64-unknown-unknown";
+        database.triple_add(triple).await.unwrap();
+        let info = database.triple_info(triple).await.unwrap();
+        assert_eq!(info.name, triple);
         assert!(!info.enabled);
     })
     .await;
 }
 
 #[tokio::test]
-async fn can_target_set_enabled() {
+async fn can_triple_set_enabled() {
     with_database(|database: Database| async move {
-        let target = "x86_64-unknown-unknown";
-        database.target_add(target).await.unwrap();
-        let info = database.target_info(target).await.unwrap();
+        let triple = "x86_64-unknown-unknown";
+        database.triple_add(triple).await.unwrap();
+        let info = database.triple_info(triple).await.unwrap();
         assert!(!info.enabled);
         for enabled in [true, false] {
-            database.target_enabled(target, enabled).await.unwrap();
-            let info = database.target_info(target).await.unwrap();
+            database.triple_enabled(triple, enabled).await.unwrap();
+            let info = database.triple_info(triple).await.unwrap();
             assert_eq!(info.enabled, enabled);
         }
     })
@@ -304,51 +335,51 @@ async fn can_target_set_enabled() {
 }
 
 #[tokio::test]
-async fn can_target_list() {
+async fn can_triple_list() {
     with_database(|database: Database| async move {
-        let targets = ["x86_64-unknown-unknown", "arm64-unknown-musl"];
+        let triples = ["x86_64-unknown-unknown", "arm64-unknown-musl"];
 
-        // add targets
-        for target in targets {
-            database.target_add(target).await.unwrap();
+        // add triples
+        for triple in triples {
+            database.triple_add(triple).await.unwrap();
         }
 
         // make sure they are all there
-        let list = database.target_list().await.unwrap();
-        for target in targets {
-            assert!(list.contains(target));
+        let list = database.triple_list().await.unwrap();
+        for triple in triples {
+            assert!(list.contains(triple));
         }
     })
     .await;
 }
 
 #[tokio::test]
-async fn can_target_remove() {
+async fn can_triple_remove() {
     with_database(|database: Database| async move {
-        let targets = ["x86_64-unknown-unknown", "arm64-unknown-musl"];
-        for target in &targets {
-            database.target_add(target).await.unwrap();
+        let triples = ["x86_64-unknown-unknown", "arm64-unknown-musl"];
+        for triple in &triples {
+            database.triple_add(triple).await.unwrap();
         }
 
-        database.target_remove(targets[0]).await.unwrap();
-        let list = database.target_list().await.unwrap();
-        assert!(!list.contains(targets[0]));
+        database.triple_remove(triples[0]).await.unwrap();
+        let list = database.triple_list().await.unwrap();
+        assert!(!list.contains(triples[0]));
     })
     .await;
 }
 
 #[tokio::test]
-async fn can_target_rename() {
+async fn can_triple_rename() {
     with_database(|database: Database| async move {
-        let target_original = "x86_64-unknown";
-        let target_renamed = "x86_64-unknown-unknown";
-        database.target_add(target_original).await.unwrap();
+        let triple_original = "x86_64-unknown";
+        let triple_renamed = "x86_64-unknown-unknown";
+        database.triple_add(triple_original).await.unwrap();
         database
-            .target_rename(target_original, target_renamed)
+            .triple_rename(triple_original, triple_renamed)
             .await
             .unwrap();
-        let info = database.target_info(target_renamed).await.unwrap();
-        assert_eq!(info.name, target_renamed);
+        let info = database.triple_info(triple_renamed).await.unwrap();
+        assert_eq!(info.name, triple_renamed);
     })
     .await;
 }
@@ -356,9 +387,9 @@ async fn can_target_rename() {
 #[tokio::test]
 async fn can_job_create() {
     with_database(|mut database: Database| async move {
-        // add target
-        let target = "x86_64-unknown-unknown";
-        database.target_add(target).await.unwrap();
+        // add triple
+        let triple = "x86_64-unknown-unknown";
+        database.triple_add(triple).await.unwrap();
 
         // add crate and version
         let name = "serde";
@@ -378,16 +409,18 @@ async fn can_job_create() {
             .await
             .unwrap();
         transaction.commit().await.unwrap();
-        database.builder_target_add(builder, target).await.unwrap();
+        database.builder_triple_add(builder, triple).await.unwrap();
+
+        database.tasks_create_all("metadata", triple).await.unwrap();
 
         // add job
-        let job = database.job_request(builder, target).await.unwrap();
+        let job = database.job_request(builder, triple).await.unwrap();
 
         // get job info
         let info = database.job_info(job).await.unwrap();
 
         assert_eq!(info.builder, builder);
-        assert_eq!(info.target, target);
+        assert_eq!(info.triple, triple);
         assert_eq!(info.name, name);
         assert_eq!(info.version, version);
     })

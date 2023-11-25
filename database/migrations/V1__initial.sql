@@ -20,18 +20,20 @@ CREATE TABLE "builders" (
     "comment" TEXT
 );
 
--- targets that can be built for (example x86_64-unknown-linux-musl)
-CREATE TABLE "targets" (
+-- triples that can be built for (example x86_64-unknown-linux-musl)
+CREATE TABLE "triples" (
     "id" BIGSERIAL PRIMARY KEY,
     "enabled" BOOLEAN NOT NULL DEFAULT (FALSE),
     "name" TEXT NOT NULL UNIQUE
 );
 
--- targets that are enabled per builder
-CREATE TABLE "builder_targets" (
+INSERT INTO "triples"("name", "enabled") VALUES ('generic', true);
+
+-- triples that are enabled per builder
+CREATE TABLE "builder_triples" (
     "builder" BIGINT NOT NULL REFERENCES builders(id) ON DELETE CASCADE,
-    "target" BIGINT NOT NULL REFERENCES targets(id) ON DELETE CASCADE,
-    PRIMARY KEY ("builder", "target")
+    "triple" BIGINT NOT NULL REFERENCES triples(id) ON DELETE CASCADE,
+    PRIMARY KEY ("builder", "triple")
 );
 
 -- crates from the registry
@@ -51,7 +53,26 @@ CREATE TABLE "crate_versions" (
 );
 
 -- job stages
-CREATE TABLE job_stages(
+CREATE TABLE "task_kinds" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "name" TEXT NOT NULL UNIQUE
+);
+
+INSERT INTO task_kinds(name) VALUES ('metadata');
+INSERT INTO task_kinds(name) VALUES ('tarball');
+INSERT INTO task_kinds(name) VALUES ('trunk');
+INSERT INTO task_kinds(name) VALUES ('coverage');
+
+CREATE TABLE "tasks" (
+    "id" BIGSERIAL PRIMARY KEY,
+    "version" BIGINT NOT NULL REFERENCES crate_versions(id) ON DELETE RESTRICT,
+    "kind" BIGINT NOT NULL REFERENCES task_kinds(id) ON DELETE RESTRICT,
+    "triple" BIGINT NOT NULL REFERENCES triples(id) ON DELETE RESTRICT,
+    UNIQUE ("version", "kind", "triple")
+);
+
+-- job stages
+CREATE TABLE "job_stages" (
     "id" BIGSERIAL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE
 );
@@ -62,12 +83,11 @@ INSERT INTO job_stages(name) VALUES ('build');
 INSERT INTO job_stages(name) VALUES ('upload');
 
 -- build jobs and their current status
-CREATE TABLE jobs(
+CREATE TABLE "jobs" (
     "id" BIGSERIAL PRIMARY KEY,
+    "task" BIGINT NOT NULL REFERENCES tasks(id) ON DELETE RESTRICT,
     "uuid" UUID NOT NULL UNIQUE,
     "builder" BIGINT NOT NULL REFERENCES builders(id) ON DELETE RESTRICT,
-    "target" BIGINT NOT NULL REFERENCES targets(id) ON DELETE RESTRICT,
-    "crate_version" BIGINT NOT NULL REFERENCES crate_versions(id) ON DELETE RESTRICT,
     "started" BIGINT NOT NULL DEFAULT (0),
     "timeout" BIGINT NOT NULL DEFAULT (0),
     "stage" BIGINT NOT NULL REFERENCES job_stages(id) ON DELETE RESTRICT,
@@ -102,20 +122,34 @@ CREATE TABLE "job_artifact_downloads" (
     PRIMARY KEY ("artifact", "date")
 );
 
+CREATE VIEW "tasks_view" AS
+    SELECT
+        crates.name AS crate,
+        crate_versions.version,
+        task_kinds.name AS kind,
+        triples.name AS triple
+    FROM tasks
+    JOIN triples ON tasks.triple = triples.id
+    JOIN task_kinds ON tasks.kind = task_kinds.id
+    JOIN crate_versions ON tasks.version = crate_versions.id
+    JOIN crates ON crate_versions.crate = crates.id;
+
 CREATE VIEW "jobs_view" AS
     SELECT
         jobs.*,
-        targets.name AS target_name,
+        triples.name AS triple_name,
         builders.uuid AS builder_uuid,
         crates.name AS crate_name,
         crate_versions.version AS crate_version_version
     FROM jobs
     JOIN builders
         ON jobs.builder = builders.id
-    JOIN targets
-        ON jobs.target = targets.id
+    JOIN tasks
+        ON jobs.task = tasks.id
+    JOIN triples
+        ON tasks.triple = triples.id
     JOIN crate_versions
-        ON jobs.crate_version = crate_versions.id
+        ON tasks.version = crate_versions.id
     JOIN crates
         ON crate_versions.crate = crates.id;
 
@@ -140,19 +174,19 @@ CREATE VIEW "builders_view" AS
     JOIN pubkeys
         ON builders.pubkey = pubkeys.id;
 
-CREATE VIEW "builder_targets_view" AS
+CREATE VIEW "builder_triples_view" AS
     SELECT
         builders.id AS builder,
         builders.uuid AS builder_uuid,
         builders.enabled AS builder_enabled,
         builders.comment AS builder_comment,
-        targets.id AS target,
-        targets.name AS target_name
-    FROM builder_targets
-    JOIN targets
-        ON builder_targets.target = targets.id
+        triples.id AS triple,
+        triples.name AS triple_name
+    FROM builder_triples
+    JOIN triples
+        ON builder_triples.triple = triples.id
     JOIN builders
-        ON builder_targets.builder = builders.id;
+        ON builder_triples.builder = builders.id;
 
 -- view for registry versions
 CREATE VIEW "crate_versions_view" AS
@@ -162,22 +196,4 @@ CREATE VIEW "crate_versions_view" AS
     FROM crates
     JOIN crate_versions
         ON crates.id = crate_versions.crate;
-
--- build queue: per-target list of crate versions that we have not built yet.
-CREATE VIEW "build_queue" AS
-    SELECT
-        targets.id AS target,
-        targets.name AS target_name,
-        crate_versions.id AS version_id,
-        crate_versions.*
-    FROM targets
-    CROSS JOIN crate_versions
-    WHERE crate_versions.yanked = FALSE
-    AND NOT EXISTS (
-        SELECT id
-        FROM jobs
-        WHERE crate_version = crate_versions.id
-        AND target = targets.id
-        AND success IS NULL OR success = TRUE
-    );
 

@@ -23,9 +23,9 @@ pub enum Command {
         #[clap(subcommand)]
         command: BuilderCommand,
     },
-    Target {
+    Triple {
         #[clap(subcommand)]
-        command: TargetCommand,
+        command: TripleCommand,
     },
 }
 
@@ -50,26 +50,26 @@ pub enum BuilderCommand {
         #[clap(long, env)]
         comment: Option<String>,
 
-        /// Adds allowed target.
+        /// Adds allowed triple.
         #[clap(long, env)]
-        target_add: Vec<String>,
+        triple_add: Vec<String>,
 
-        /// Removes allowed target.
+        /// Removes allowed triple.
         #[clap(long, env)]
-        target_remove: Vec<String>,
+        triple_remove: Vec<String>,
     },
     List,
 }
 
 #[derive(Parser, Debug)]
-pub enum TargetCommand {
+pub enum TripleCommand {
     Add {
         #[clap(env)]
-        target: String,
+        triple: String,
     },
     Edit {
         #[clap(env)]
-        target: String,
+        triple: String,
 
         #[clap(long, env)]
         enabled: Option<bool>,
@@ -99,8 +99,8 @@ impl Command {
                     public_key_file,
                     enabled,
                     comment,
-                    target_add,
-                    target_remove,
+                    triple_add,
+                    triple_remove,
                 } => {
                     let key = PublicKey::from_openssh(&read_to_string(&public_key_file).await?)?;
                     let builder = database
@@ -114,12 +114,12 @@ impl Command {
                         database.builder_set_comment(builder, comment).await?;
                     }
 
-                    for target in target_add {
-                        database.builder_target_add(builder, target).await?;
+                    for triple in triple_add {
+                        database.builder_triple_add(builder, triple).await?;
                     }
 
-                    for target in target_remove {
-                        database.builder_target_remove(builder, target).await?;
+                    for triple in triple_remove {
+                        database.builder_triple_remove(builder, triple).await?;
                     }
                 }
                 BuilderCommand::List => {
@@ -130,27 +130,27 @@ impl Command {
                     }
                 }
             },
-            Command::Target { command } => match command {
-                TargetCommand::Add { target } => {
-                    database.target_add(target).await?;
+            Command::Triple { command } => match command {
+                TripleCommand::Add { triple } => {
+                    database.triple_add(triple).await?;
                 }
-                TargetCommand::Edit {
-                    target,
+                TripleCommand::Edit {
+                    triple,
                     enabled,
                     rename,
                 } => {
                     if let Some(enabled) = enabled {
-                        database.target_enabled(target, *enabled).await?;
+                        database.triple_enabled(triple, *enabled).await?;
                     }
 
                     if let Some(rename) = rename {
-                        database.target_rename(target, rename).await?;
+                        database.triple_rename(triple, rename).await?;
                     }
                 }
-                TargetCommand::List => {
-                    for target in &database.target_list().await? {
-                        let _info = database.target_info(target).await?;
-                        println!("{target:#?}");
+                TripleCommand::List => {
+                    for triple in &database.triple_list().await? {
+                        let _info = database.triple_info(triple).await?;
+                        println!("{triple:#?}");
                     }
                 }
             },
