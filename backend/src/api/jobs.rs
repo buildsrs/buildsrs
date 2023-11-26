@@ -112,11 +112,9 @@ impl Backend {
     /// Handle jobs websocket connection.
     pub async fn handle_jobs(&self, mut websocket: WebSocket) -> Result<(), WebSocketError> {
         let fingerprint = extract_fingerprint(&mut websocket).await?;
-        let uuid = self
-            .database()
-            .builder_lookup(&fingerprint.to_string())
-            .await?;
-        let builder = self.database().builder_get(uuid).await?;
+        let database = self.database().read().await.unwrap();
+        let uuid = database.builder_lookup(&fingerprint.to_string()).await?;
+        let builder = database.builder_get(uuid).await?;
         let mut connection = Connection { websocket, builder };
         connection.challenge().await?;
         connection.handle().await?;

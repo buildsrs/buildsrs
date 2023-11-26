@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 use anyhow::Result;
-use buildsrs_database::Database;
+use buildsrs_database::DatabaseOptions;
 use buildsrs_registry_sync::Syncer;
 use clap::Parser;
 use crates_index::GitIndex;
@@ -8,7 +8,7 @@ use log::*;
 use std::{path::PathBuf, time::Duration};
 use url::Url;
 
-#[derive(Parser, PartialEq, Clone, Debug)]
+#[derive(Parser, Clone, Debug)]
 pub struct Options {
     /// Path to keep index at.
     #[clap(long, short, env = "REGISTRY_PATH")]
@@ -22,9 +22,8 @@ pub struct Options {
     #[clap(short, long, env = "SYNC_INTERVAL", value_parser = humantime::parse_duration, default_value = "1h")]
     interval: Duration,
 
-    /// Database to connect to
-    #[clap(short, long, env = "DATABASE")]
-    database: String,
+    #[clap(flatten)]
+    database: DatabaseOptions,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -33,7 +32,7 @@ async fn main() -> Result<()> {
     let options = Options::parse();
 
     info!("Connecting to database");
-    let database = Database::connect(&options.database).await.unwrap();
+    let database = options.database.build().await.unwrap();
 
     info!("Setting up registry index");
     let index = GitIndex::with_path(&options.path, options.registry.as_str()).unwrap();

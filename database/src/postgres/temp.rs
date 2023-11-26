@@ -1,4 +1,4 @@
-use crate::Database;
+use super::{Database, DatabaseConnection, Pool};
 use rand::{thread_rng, Rng};
 use tokio::task::JoinHandle;
 use tokio_postgres::{connect, Client, Error, NoTls};
@@ -14,10 +14,10 @@ fn random_database_name(length: usize) -> String {
 /// This is used to generate a temporary database during testing.
 pub struct TempDatabase {
     database_name: String,
-    inner_handle: JoinHandle<Result<(), Error>>,
     inner_host: String,
     outer_client: Client,
     outer_handle: JoinHandle<Result<(), Error>>,
+    pool: Pool,
 }
 
 impl TempDatabase {
@@ -27,7 +27,7 @@ impl TempDatabase {
     }
 
     /// Create new temporary database.
-    pub async fn create(database: &str, dump: Option<&str>) -> Result<(Self, Database), Error> {
+    pub async fn create(database: &str, dump: Option<&str>) -> Result<Self, Error> {
         // connect to database
         let (outer_client, connection) = connect(database, NoTls).await?;
         let outer_handle = tokio::spawn(connection);
@@ -62,29 +62,34 @@ impl TempDatabase {
             .await
             .unwrap();
         let database = Database::new(inner_client).await.unwrap();
+        let database = DatabaseConnection::new(database, Some(inner_handle));
+        let pool = Pool::from(database);
 
-        Ok((
-            TempDatabase {
-                database_name,
-                inner_handle,
-                inner_host,
-                outer_client,
-                outer_handle,
-            },
-            database,
-        ))
+        //let pool = Pool::new(&inner_host, 1).await?;
+
+        Ok(TempDatabase {
+            database_name,
+            inner_host,
+            outer_client,
+            outer_handle,
+            pool,
+        })
+    }
+
+    pub fn pool(&self) -> &Pool {
+        &self.pool
     }
 
     /// Delete temporary database.
     pub async fn delete(self) -> Result<(), Error> {
         let Self {
             database_name,
-            inner_handle,
             outer_client,
             outer_handle,
+            pool,
             ..
         } = self;
-        inner_handle.await.unwrap().unwrap();
+        pool.close().await;
 
         // drop database
         outer_client

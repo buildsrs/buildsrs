@@ -13,7 +13,7 @@
 //! Git index and a database connection.
 
 use anyhow::Result;
-use buildsrs_database::Database;
+use buildsrs_database::AnyMetadata;
 use crates_index::GitIndex;
 use log::*;
 use std::time::Duration;
@@ -21,13 +21,13 @@ use tokio::time::{self, MissedTickBehavior};
 
 /// Synchronize a package registry with the database.
 pub struct Syncer {
-    database: Database,
+    database: AnyMetadata,
     index: GitIndex,
 }
 
 impl Syncer {
     /// Create new instance, given a database connection and a [`GitIndex`].
-    pub fn new(database: Database, index: GitIndex) -> Self {
+    pub fn new(database: AnyMetadata, index: GitIndex) -> Self {
         Self { database, index }
     }
 
@@ -36,25 +36,31 @@ impl Syncer {
         info!("Updating crate index");
         self.index.update()?;
 
+        let writer = self.database.write().await.unwrap();
+
         info!("Updating crates from index");
         for krate in self.index.crates() {
             if let Some(krate) = self.index.crate_(krate.name()) {
-                self.database.crate_add(krate.name()).await?;
+                writer.crate_add(krate.name()).await.unwrap();
                 for version in krate.versions() {
-                    self.database
+                    writer
                         .crate_version_add(
                             krate.name(),
                             version.version(),
                             &hex::encode(version.checksum()),
                             version.is_yanked(),
                         )
-                        .await?;
+                        .await
+                        .unwrap();
                 }
-                self.database
+                writer
                     .tasks_create_all("metadata", "generic")
-                    .await?;
+                    .await
+                    .unwrap();
             }
         }
+
+        writer.commit().await.unwrap();
         Ok(())
     }
 

@@ -10,7 +10,7 @@ macro_rules! statements {
             ),)*
             $($name => $statement,)*
         );
-        impl<T: GenericClient> Database<T> {
+        impl Database<::tokio_postgres::Transaction<'_>> {
             $(statements!(@implement, $(#[$meta])* $procedure, $($arg: $type,)*);)*
         }
     };
@@ -27,7 +27,7 @@ macro_rules! statements {
         /// Where possible, all interactions with the database are performed using prepared
         /// statements. This allows for catching issues with statements early (during preparation
         /// time) and improves performance. This type contains all of the prepared statements.
-        pub struct Statements {
+        struct Statements {
             $($name: Statement,)*
         }
 
@@ -40,7 +40,7 @@ macro_rules! statements {
     (@prepare, $($name:ident => $statement:expr,)*) => {
         impl Statements {
             /// Prepare statements.
-            pub async fn prepare(client: &Client) -> Result<Self, Error> {
+            async fn prepare(client: &Client) -> Result<Self, Error> {
                 Ok(Self {
                     $($name: client.prepare($statement).await?,)*
                 })

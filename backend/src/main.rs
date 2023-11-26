@@ -9,7 +9,6 @@ mod options;
 async fn main() -> Result<()> {
     let options = options::Options::parse();
     let backend = options.build().await?;
-
     backend.listen(options.listen).await?;
     Ok(())
 }

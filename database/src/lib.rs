@@ -8,20 +8,32 @@
 
 mod postgres;
 
+use crate::entity::Builder;
 use async_trait::async_trait;
+use buildsrs_common::entities::*;
 pub use postgres::*;
 use std::sync::Arc;
+use uuid::Uuid;
+
+#[cfg(feature = "options")]
+mod options;
+
+#[cfg(feature = "options")]
+pub use options::DatabaseOptions;
 
 /// Shared generic error type.
 pub type SharedError = Arc<dyn std::error::Error + Send + Sync>;
 
 /// Boxed generic error type.
-pub type BoxError = Arc<dyn std::error::Error + Send + Sync>;
+pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Shared generic metadata instance.
 ///
 /// This type is how downstream users should consume metadata instances.
 pub type AnyMetadata = Arc<dyn Metadata>;
+
+//#[derive(thiserror::Error, Debug)]
+//pub enum ReadError {}
 
 /// Metadata trait.
 ///
@@ -35,14 +47,22 @@ pub type AnyMetadata = Arc<dyn Metadata>;
 #[async_trait]
 pub trait Metadata: Send + Sync + std::fmt::Debug {
     /// Get a read handle to use for reading.
-    async fn read(&self) -> Result<Box<dyn ReadHandle>, SharedError>;
+    async fn read(&self) -> Result<Box<dyn ReadHandle>, BoxError>;
 
     /// Get a write handle to use for writing.
-    async fn write(&self) -> Result<Box<dyn WriteHandle>, SharedError>;
+    async fn write(&self) -> Result<Box<dyn WriteHandle>, BoxError>;
 }
 
 #[async_trait]
-pub trait ReadHandle: Send + Sync {}
+pub trait ReadHandle: Send + Sync {
+    async fn builder_lookup(&self, fingerprint: &str) -> Result<Uuid, Error>;
+    async fn builder_get(&self, builder: Uuid) -> Result<Builder, Error>;
+    async fn builder_list(&self) -> Result<Vec<Uuid>, Error>;
+
+    async fn crate_info(&self, name: &str) -> Result<CrateInfo, Error>;
+    async fn crate_versions(&self, name: &str) -> Result<Vec<String>, Error>;
+    async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error>;
+}
 
 /// Handle used for writing to the metadata service.
 ///
@@ -50,4 +70,16 @@ pub trait ReadHandle: Send + Sync {}
 /// data. However, the changes made using calls in this trait are not visible from other handles
 /// unless they are committed, using the [`commit()`](WriteHandle::commit) call.
 #[async_trait]
-pub trait WriteHandle: ReadHandle + Send + Sync {}
+pub trait WriteHandle: ReadHandle + Send + Sync {
+    async fn crate_add(&self, name: &str) -> Result<(), BoxError>;
+    async fn crate_version_add(
+        &self,
+        name: &str,
+        version: &str,
+        checksum: &str,
+        yanked: bool,
+    ) -> Result<(), BoxError>;
+
+    async fn tasks_create_all(&self, kind: &str, triple: &str) -> Result<(), BoxError>;
+    async fn commit(self: Box<Self>) -> Result<(), BoxError>;
+}

@@ -54,11 +54,11 @@ frontend:
 
 # launch backend
 backend:
-    RUST_LOG=debug cargo run -p buildsrs-backend -- --database "{{postgres_str}}" --storage filesystem --storage-filesystem-path $(mktemp)
+    RUST_LOG=debug cargo run -p buildsrs-backend -- --database postgres --database-postgres "{{postgres_str}}" --storage filesystem --storage-filesystem-path $(mktemp)
 
 # launch registry sync
 registry-sync:
-    RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database "{{postgres_str}}"
+    RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database postgres --database-postgres "{{postgres_str}}"
 
 # launch builder
 builder:

@@ -1,8 +1,11 @@
 #![allow(missing_docs)]
 
+use super::*;
+use deadpool::unmanaged::{Object, Pool as Deadpool};
 use futures::Stream;
 use ssh_key::{HashAlg, PublicKey};
-use std::{collections::BTreeSet, pin::Pin, sync::Arc};
+use std::{collections::BTreeSet, ops::Deref, pin::Pin, sync::Arc};
+use tokio::task::JoinHandle;
 use tokio_postgres::{connect, AsyncMessage, Client, GenericClient, NoTls, Statement};
 pub use tokio_postgres::{Error, Transaction};
 use uuid::Uuid;
@@ -240,9 +243,9 @@ refinery::embed_migrations!("migrations");
 #[derive(Clone, Debug)]
 pub struct Database<T = Client> {
     /// Precompiled statements
-    pub statements: Arc<Statements>,
+    statements: Arc<Statements>,
     /// Connection to database
-    pub connection: T,
+    connection: T,
 }
 
 impl<T: GenericClient> Database<T> {
@@ -461,5 +464,250 @@ impl Database<Transaction<'_>> {
                 .await?;
         }
         Ok(id)
+    }
+}
+
+#[derive(Debug)]
+pub struct DatabaseConnection {
+    database: Database,
+    connection: Option<JoinHandle<Result<(), Error>>>,
+}
+
+impl DatabaseConnection {
+    pub fn new(database: Database, connection: Option<JoinHandle<Result<(), Error>>>) -> Self {
+        Self {
+            database,
+            connection,
+        }
+    }
+
+    pub async fn close(self) -> Result<(), BoxError> {
+        let Self {
+            database,
+            connection,
+        } = self;
+        drop(database);
+        if let Some(connection) = connection {
+            connection.await??;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Pool {
+    pool: Deadpool<DatabaseConnection>,
+}
+
+impl Pool {
+    pub async fn new(database: &str, count: usize) -> Result<Self, Error> {
+        let mut databases = vec![];
+        for _ in 0..count {
+            let (client, connection) = connect(database, NoTls).await?;
+            databases.push(DatabaseConnection {
+                connection: Some(tokio::spawn(connection)),
+                database: Database::new(client).await?,
+            });
+        }
+
+        Ok(Pool {
+            pool: Deadpool::from(databases),
+        })
+    }
+
+    pub async fn close(self) {
+        self.pool.close();
+        while let Ok(conn) = self.pool.remove().await {
+            let _ = conn.close().await;
+        }
+    }
+
+    pub async fn read(&self) -> Result<Handle, BoxError> {
+        Ok(Handle {
+            object: self.pool.get().await?,
+        })
+    }
+
+    pub async fn write(&self) -> Result<Writer, BoxError> {
+        let object = self.pool.get().await?;
+
+        let mut tx = Writer {
+            object: Box::new(object),
+            transaction: None,
+        };
+
+        let transaction = tx.object.database.transaction().await?;
+
+        // we are doing something naughty here.. this is only safe
+        // because we know the client is boxed and pinned in place.
+        let transaction = unsafe { std::mem::transmute::<_, _>(transaction) };
+
+        tx.transaction = Some(transaction);
+
+        Ok(tx)
+    }
+}
+
+impl From<DatabaseConnection> for Pool {
+    fn from(conn: DatabaseConnection) -> Self {
+        Pool {
+            pool: Deadpool::from(vec![conn]),
+        }
+    }
+}
+
+impl From<Vec<DatabaseConnection>> for Pool {
+    fn from(conns: Vec<DatabaseConnection>) -> Self {
+        Pool {
+            pool: Deadpool::from(conns),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Handle {
+    object: Object<DatabaseConnection>,
+}
+
+impl Deref for Handle {
+    type Target = Database;
+
+    fn deref(&self) -> &Self::Target {
+        &self.object.database
+    }
+}
+
+trait AsDatabase {
+    type Client: GenericClient;
+
+    fn database(&self) -> &Database<Self::Client>;
+}
+
+impl AsDatabase for Handle {
+    type Client = Client;
+
+    fn database(&self) -> &Database<Self::Client> {
+        &self.object.database
+    }
+}
+
+impl AsDatabase for Writer {
+    type Client = Transaction<'static>;
+
+    fn database(&self) -> &Database<Self::Client> {
+        Writer::database(self)
+    }
+}
+
+#[derive()]
+pub struct Writer {
+    object: Box<Object<DatabaseConnection>>,
+    transaction: Option<Database<Transaction<'static>>>,
+}
+
+impl Writer {
+    pub async fn commit(mut self) -> Result<(), Error> {
+        let transaction = std::mem::take(&mut self.transaction);
+        let transaction = transaction.unwrap();
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    fn database(&self) -> &Database<Transaction<'static>> {
+        self.transaction.as_ref().unwrap()
+    }
+}
+
+impl Deref for Writer {
+    type Target = Database<Transaction<'static>>;
+
+    fn deref(&self) -> &Self::Target {
+        Writer::database(self)
+    }
+}
+
+impl Drop for Writer {
+    fn drop(&mut self) {
+        // drop transaction
+        self.transaction = None;
+    }
+}
+
+#[async_trait::async_trait]
+impl Metadata for Pool {
+    /// Get a read handle to use for reading.
+    async fn read(&self) -> Result<Box<dyn ReadHandle>, BoxError> {
+        Pool::read(self)
+            .await
+            .map(|x| Box::new(x) as Box<dyn ReadHandle>)
+    }
+
+    /// Get a write handle to use for writing.
+    async fn write(&self) -> Result<Box<dyn WriteHandle>, BoxError> {
+        Pool::write(self)
+            .await
+            .map(|x| Box::new(x) as Box<dyn WriteHandle>)
+    }
+}
+
+#[async_trait::async_trait]
+impl<T: AsDatabase + Send + Sync> ReadHandle for T
+where
+    <T as AsDatabase>::Client: Send + Sync,
+{
+    async fn builder_lookup(&self, fingerprint: &str) -> Result<Uuid, Error> {
+        self.database().builder_lookup(fingerprint).await
+    }
+
+    async fn builder_get(&self, builder: Uuid) -> Result<Builder, Error> {
+        self.database().builder_get(builder).await
+    }
+
+    async fn builder_list(&self) -> Result<Vec<Uuid>, Error> {
+        self.database().builder_list().await
+    }
+
+    async fn crate_info(&self, name: &str) -> Result<CrateInfo, Error> {
+        self.database().crate_info(name).await
+    }
+
+    async fn crate_versions(&self, name: &str) -> Result<Vec<String>, Error> {
+        self.database().crate_versions(name).await
+    }
+
+    async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error> {
+        self.database().crate_version_info(name, version).await
+    }
+}
+
+#[async_trait::async_trait]
+impl WriteHandle for Writer {
+    async fn crate_add(&self, name: &str) -> Result<(), BoxError> {
+        self.database().crate_add(name).await?;
+        Ok(())
+    }
+
+    async fn crate_version_add(
+        &self,
+        name: &str,
+        version: &str,
+        checksum: &str,
+        yanked: bool,
+    ) -> Result<(), BoxError> {
+        self.database()
+            .crate_version_add(name, version, checksum, yanked)
+            .await?;
+        Ok(())
+    }
+
+    async fn tasks_create_all(&self, kind: &str, triple: &str) -> Result<(), BoxError> {
+        self.database().tasks_create_all(kind, triple).await?;
+        Ok(())
+    }
+
+    async fn commit(self: Box<Self>) -> Result<(), BoxError> {
+        let writer: Writer = *self;
+        writer.commit().await?;
+        Ok(())
     }
 }
