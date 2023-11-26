@@ -6,8 +6,15 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-serde = { workspace = true, features = ["derive"] }
+bytes = { workspace = true }
+proptest = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+test-strategy = { workspace = true, optional = true }
 url = { workspace = true, features = ["serde"] }
 
 [lints]
 workspace = true
+
+[features]
+proptest = ["dep:proptest", "dep:test-strategy"]
+serde = ["dep:serde", "bytes/serde"]

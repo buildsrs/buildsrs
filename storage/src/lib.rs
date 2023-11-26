@@ -5,9 +5,8 @@
 //! appropriate features.
 
 use bytes::Bytes;
-use std::{error::Error, fmt::Debug, sync::Arc, time::Duration};
-use test_strategy::Arbitrary;
-use url::Url;
+use std::{error::Error, fmt::Debug, sync::Arc};
+pub use buildsrs_common::entities::{ArtifactKind, ArtifactId, ArtifactData};
 
 /// Shared generic error.
 pub type SharedError = Arc<dyn Error + Send + Sync>;
@@ -41,85 +40,6 @@ pub enum StorageError {
     /// Other error
     #[error(transparent)]
     Other(#[from] SharedError),
-}
-
-/// Kind of artifact.
-#[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
-pub enum ArtifactKind {
-    /// Tarball, with a `.tar.gz` extension.
-    Manifest,
-    /// Manifest, with a `.json` extension.
-    Tarball,
-    /// Debian package, with a `.deb` extension.
-    Debian,
-}
-
-impl ArtifactKind {
-    /// Get extension for this artifact kind.
-    pub fn extension(&self) -> &'static str {
-        match self {
-            Self::Manifest => "json",
-            Self::Tarball => "tar.gz",
-            Self::Debian => "deb",
-        }
-    }
-}
-
-/// Artifact identifier.
-#[derive(Clone, Debug, Arbitrary, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ArtifactId {
-    /// Name of crate
-    #[strategy("[a-z]{20}")]
-    pub krate: String,
-    /// Name of crate version
-    #[strategy("[a-z]{20}")]
-    pub version: String,
-    /// Target triple
-    #[strategy("[a-z]{20}")]
-    pub target: String,
-    /// Kind of artifact
-    pub kind: ArtifactKind,
-}
-
-impl ArtifactId {
-    /// Get the file name for this artifact identifier
-    pub fn file_name(&self) -> String {
-        let Self {
-            krate,
-            version,
-            target,
-            kind,
-        } = &self;
-        let extension = kind.extension();
-        format!("{krate}_{version}_{target}.{extension}")
-    }
-}
-
-/// Data of artifact
-#[derive(Clone, Debug)]
-pub enum ArtifactData {
-    /// Raw data
-    Data {
-        /// Bytes
-        bytes: Bytes,
-    },
-    /// Redirect
-    Redirect {
-        /// How long this link is valid for
-        validity: Duration,
-        /// URL to redirect to
-        url: Url,
-    },
-}
-
-impl ArtifactData {
-    /// Get raw bytes, if exists
-    pub fn bytes(&self) -> Option<&Bytes> {
-        match self {
-            Self::Data { bytes } => Some(bytes),
-            Self::Redirect { .. } => None,
-        }
-    }
 }
 
 #[cfg(feature = "options")]

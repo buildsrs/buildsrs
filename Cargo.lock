@@ -1065,7 +1065,10 @@ dependencies = [
 name = "buildsrs-common"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "proptest",
  "serde",
+ "test-strategy",
  "url",
 ]
 
@@ -1135,6 +1138,7 @@ dependencies = [
  "aws-credential-types 0.57.1",
  "aws-sdk-s3 0.35.0",
  "aws-types 0.57.1",
+ "buildsrs-common",
  "bytes",
  "clap",
  "moka",
