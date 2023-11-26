@@ -8,6 +8,7 @@ authors.workspace = true
 
 [dependencies]
 async-trait.workspace = true
+buildsrs-common.workspace = true
 clap = { workspace = true, features = ["derive", "env"], optional = true }
 futures.workspace = true
 postgres-types = { version = "0.2.6", features = ["derive"] }
@@ -21,6 +22,7 @@ tokio-postgres = { version = "0.7.10", features = ["with-uuid-1", "with-serde_js
 uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
+buildsrs-common = { workspace = true, features = ["proptest"] }
 lzma-rs = "0.3.0"
 rand = { version = "0.8.5" }
 rand_core.workspace = true

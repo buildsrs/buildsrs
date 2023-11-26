@@ -3,4 +3,3 @@
 //! Common types shared by the buildsrs project.
 
 pub mod entities;
-

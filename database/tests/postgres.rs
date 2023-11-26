@@ -1,5 +1,5 @@
 use buildsrs_database::{
-    entity::{Kind, Task},
+    entity::{ArtifactKind, Task},
     Database, TempDatabase,
 };
 use rand_core::OsRng;
@@ -94,7 +94,7 @@ async fn can_add_crate_version_task() {
             [Task {
                 krate: name.into(),
                 version: version.into(),
-                kind: Kind::Metadata,
+                kind: ArtifactKind::Metadata,
                 triple: "generic".into(),
             }]
         );

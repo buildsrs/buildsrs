@@ -8,13 +8,17 @@ authors.workspace = true
 [dependencies]
 bytes = { workspace = true }
 proptest = { workspace = true, optional = true }
+semver = "1.0.20"
 serde = { workspace = true, features = ["derive"], optional = true }
+ssh-key.workspace = true
+strum = { version = "0.25.0", features = ["derive"] }
 test-strategy = { workspace = true, optional = true }
 url = { workspace = true, features = ["serde"] }
+uuid.workspace = true
 
 [lints]
 workspace = true
 
 [features]
 proptest = ["dep:proptest", "dep:test-strategy"]
-serde = ["dep:serde", "bytes/serde"]
+serde = ["dep:serde", "bytes/serde", "ssh-key/serde", "uuid/serde"]

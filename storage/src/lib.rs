@@ -4,9 +4,9 @@
 //! It also defines some implementations for the storage trait, which can be enabled using the
 //! appropriate features.
 
+pub use buildsrs_common::entities::{ArtifactData, ArtifactId, ArtifactKind};
 use bytes::Bytes;
 use std::{error::Error, fmt::Debug, sync::Arc};
-pub use buildsrs_common::entities::{ArtifactKind, ArtifactId, ArtifactData};
 
 /// Shared generic error.
 pub type SharedError = Arc<dyn Error + Send + Sync>;
