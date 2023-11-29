@@ -1,4 +1,4 @@
-# Testing and Coverage
+# Running tests
 
 Testing is one of the most important parts of the process of developing this
 software. Tests serve both as documentation to some extent and they allow for
