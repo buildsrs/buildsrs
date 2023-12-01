@@ -6,17 +6,13 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
-axum = { version = "0.6.20", features = ["ws"] }
-aws-types = "0.56"
-aws-credential-types = "0.56"
-aws-sdk-s3 = "0.34"
+axum = { version = "0.7.1", features = ["ws"] }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 buildsrs-database = { workspace = true }
 buildsrs-protocol = { workspace = true }
 buildsrs-storage = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 anyhow.workspace = true
-apply = "0.3.0"
 futures.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true

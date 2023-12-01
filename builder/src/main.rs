@@ -8,6 +8,7 @@ use futures::{SinkExt, StreamExt};
 use reqwest::Client;
 use ssh_key::{HashAlg, PrivateKey};
 use std::path::PathBuf;
+use tempfile::TempDir;
 use tokio::{
     fs::File,
     io::AsyncWriteExt,
@@ -262,7 +263,7 @@ async fn main() -> Result<()> {
         }
         Command::Build(build) => {
             let strategy = options.strategy.build().await?;
-            let dir = tempdir::TempDir::new("build")?;
+            let dir = TempDir::new()?;
             println!("dir is {dir:?}");
 
             let crate_file = client.get(build.source.as_str()).send().await?;

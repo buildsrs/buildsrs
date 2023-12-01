@@ -1,5 +1,5 @@
 use super::*;
-use aws_config::SdkConfig;
+use aws_config::{BehaviorVersion, SdkConfig};
 use aws_credential_types::Credentials;
 use aws_sdk_s3::Config;
 use aws_types::region::Region;
@@ -42,7 +42,7 @@ impl S3Options {
     }
 
     async fn config(&self) -> SdkConfig {
-        aws_config::from_env()
+        aws_config::defaults(BehaviorVersion::v2023_11_09())
             .endpoint_url(self.storage_s3_endpoint.as_ref().unwrap().as_str())
             .region(Region::new(
                 self.storage_s3_region.as_ref().unwrap().clone(),

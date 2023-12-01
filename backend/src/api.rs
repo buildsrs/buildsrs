@@ -1,7 +1,8 @@
 use crate::Backend;
 use anyhow::Result;
-use axum::{Router, Server};
+use axum::{serve, Router};
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
 mod crates;
 mod jobs;
@@ -20,9 +21,8 @@ impl Backend {
     /// Launch REST API, listening on the given address.
     pub async fn listen(&self, addr: SocketAddr) -> Result<()> {
         let router = self.router();
-        Server::bind(&addr)
-            .serve(router.into_make_service())
-            .await?;
+        let listener = TcpListener::bind(&addr).await?;
+        serve(listener, router).await?;
         Ok(())
     }
 }

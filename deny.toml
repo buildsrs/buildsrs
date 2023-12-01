@@ -12,10 +12,7 @@ vulnerability = "deny"
 unmaintained = "warn"
 yanked = "warn"
 notice = "warn"
-ignore = [
-    "RUSTSEC-2018-0017",
-    "RUSTSEC-2023-0018",
-]
+ignore = []
 
 [licenses]
 unlicensed = "deny"
@@ -26,7 +23,6 @@ allow = [
     "ISC",
     "Unicode-DFS-2016",
     "BSD-3-Clause",
-    "Unlicense",
     "OpenSSL",
 ]
 deny = []
