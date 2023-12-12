@@ -719,6 +719,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "buildsrs-common",
  "buildsrs-database",
  "buildsrs-protocol",
  "buildsrs-storage",

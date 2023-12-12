@@ -1,3 +1,5 @@
+CREATE EXTENSION pg_trgm;
+
 -- ssh public keys
 CREATE TABLE "pubkeys" (
     "id" BIGSERIAL PRIMARY KEY,

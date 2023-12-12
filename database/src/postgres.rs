@@ -177,6 +177,12 @@ statements!(
         WHERE name = $1
     ";
 
+    let crate_list = "
+        SELECT name
+        FROM crates
+        WHERE name % $1
+    ";
+
     let crate_info = "
         SELECT *
         FROM crates
@@ -359,6 +365,15 @@ impl<T: GenericClient> Database<T> {
             builder: row.try_get("builder_uuid")?,
             triple: row.try_get("triple_name")?,
         })
+    }
+
+    /// Get info on a crate
+    pub async fn crate_list(&self, name: &str) -> Result<Vec<String>, Error> {
+        let rows = self
+            .connection
+            .query(&self.statements.crate_list, &[&name])
+            .await?;
+        rows.into_iter().map(|row| row.try_get("name")).collect()
     }
 
     /// Get info on a crate
@@ -665,6 +680,10 @@ where
 
     async fn builder_list(&self) -> Result<Vec<Uuid>, Error> {
         self.database().builder_list().await
+    }
+
+    async fn crate_list(&self, name: &str) -> Result<Vec<String>, Error> {
+        self.database().crate_list(name).await
     }
 
     async fn crate_info(&self, name: &str) -> Result<CrateInfo, Error> {

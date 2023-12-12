@@ -59,6 +59,7 @@ pub trait ReadHandle: Send + Sync {
     async fn builder_get(&self, builder: Uuid) -> Result<Builder, Error>;
     async fn builder_list(&self) -> Result<Vec<Uuid>, Error>;
 
+    async fn crate_list(&self, name: &str) -> Result<Vec<String>, Error>;
     async fn crate_info(&self, name: &str) -> Result<CrateInfo, Error>;
     async fn crate_versions(&self, name: &str) -> Result<Vec<String>, Error>;
     async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error>;
