@@ -1,6 +1,6 @@
 use buildsrs_database::{
     entity::{ArtifactKind, Task},
-    Database, Pool, TempDatabase,
+    Pool, TempDatabase,
 };
 use rand_core::OsRng;
 use ssh_key::{Algorithm, HashAlg, PrivateKey};
@@ -37,7 +37,7 @@ async fn test_dump_2023_09_17() {
 
 #[tokio::test]
 async fn test_statements() {
-    with_database(|pool: Pool| async move {}).await;
+    with_database(|_pool: Pool| async move {}).await;
 }
 
 #[tokio::test]
