@@ -11,7 +11,7 @@ required-features = ["options"]
 
 [dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "sync", "time"] }
-tokio-tungstenite = { version = "0.20.1", features = ["rustls-tls-native-roots"] }
+tokio-tungstenite = { version = "0.21.0", features = ["rustls-tls-native-roots"] }
 buildsrs-protocol = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"], optional = true }
 ssh-key = { workspace = true, features = ["ed25519"] }
