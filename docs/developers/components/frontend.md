@@ -6,7 +6,7 @@ the backend using a REST API, and offers capabilities to search and explore
 crates, versions and artifacts for each.  Styling is done using [Tailwind
 CSS][tailwind]. 
 
-## Crates
+## Interactions
 
 ```mermaid
 graph BT
@@ -24,7 +24,7 @@ The frontend mainly needs to interact with the backend's REST API. For artifact 
 they may be performed directly from the storage service using a redirect from the backend.
 The frontend may also receive the ability to do server-side rendering at some point.
 
-## Crates
+## Dependencies
 
 ```mermaid
 graph BT

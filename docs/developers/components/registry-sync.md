@@ -4,7 +4,7 @@ The registry sync components keeps the system in sync with the list of crates
 published on [crates.io][]. To do this, it polls the [crates.io
 index][crates.io index] and inserts any changes into the database directly.
 
-## Services
+## Interactions
 
 ```mermaid
 graph BT
@@ -18,7 +18,7 @@ graph BT
 The Registry Sync service connects directly to the database to keep it in sync.
 It has no other dependencies.
 
-## Crates
+## Dependencies
 
 ```mermaid
 graph BT

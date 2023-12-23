@@ -3,13 +3,19 @@ use anyhow::Result;
 use axum::{serve, Router};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
 
 mod crates;
+#[cfg(feature = "frontend")]
+mod frontend;
 mod jobs;
 
 fn routes() -> Router<Backend> {
-    let router = Router::new().merge(crates::routes()).merge(jobs::routes());
-    Router::new().nest("/api/v1", router)
+    let api = Router::new().merge(crates::routes()).merge(jobs::routes());
+    let router = Router::new().nest("/api/v1", api);
+    #[cfg(feature = "frontend")]
+    let router = router.nest("/", frontend::routes());
+    router.layer(TraceLayer::new_for_http())
 }
 
 impl Backend {

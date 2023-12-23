@@ -22,7 +22,7 @@ These are the tables that the database currently stores:
 | `job_artifacts` | Job artifacts |
 | `job_artifact_downloads` | Daily download counts for artifacts |
 
-## Services
+## Interactions
 
 ```mermaid
 graph BT
@@ -40,16 +40,32 @@ graph BT
 There are two services that connect to the database: the backend and the
 registry sync service.
 
-## Crates
+## Dependencies
 
 ```mermaid
 graph BT
     database[buildsrs_database]
+    backend[buildsrs_backend]
+    registry-sync[buildsrs_registry_sync]
+
+    backend-->database
+    registry-sync-->database
 
     click database "/rustdoc/buildsrs_database"
+    click backend "/rustdoc/buildsrs_database"
+    click registry-sync "/rustdoc/buildsrs_database"
 ```
 
 All database interactions are implemented in the [buildsrs_database][] crate.
+
+## Features
+
+| Name | Description |
+| --- | --- |
+| `migrations` | Enables migrations |
+| `tools` | Enables database CLI tools |
+| `temp` | Creation of temporary databases, used for testing |
+| `options` | Command-line options parsing for database connection |
 
 [postgres]: https://www.postgresql.org/
 [crates.io index]: https://github.com/rust-lang/crates.io-index

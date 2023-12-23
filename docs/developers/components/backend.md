@@ -7,7 +7,7 @@ to connect and fetch build jobs, consisting of a WebSocket and a REST API for
 uploading artifacts. This component tracks the number of downloads for each crate
 and periodically writes this data to the database.
 
-## Services
+## Interactions
 
 ```mermaid
 graph BT
@@ -35,7 +35,7 @@ is consumed by the frontend, and external tools. It also offers a WebSocket,
 which is used by the builders to connect to the backend, receive jobs and
 stream logs.
 
-## Crates
+## Dependencies
 
 ```mermaid
 graph BT
@@ -62,6 +62,13 @@ The backend is implemented in the [buildsrs_backend][] crate. It uses the
 [buildsrs_database][] and [buildsrs_storage][] crates to connect to those
 respective services. It uses the [buildsrs_protocol][] crate to implement the
 builder websocket protocol.
+
+## Features
+
+| Name | Description |
+| --- | --- |
+| `frontend` | Serve frontend static files. |
+| `frontend-vendor` | When building, builds frontend using `trunk` and bundles the resulting files into the binary. Implies `frontend`. |
 
 [buildsrs_backend]: /rustdoc/buildsrs_backend
 [buildsrs_common]: /rustdoc/buildsrs_common

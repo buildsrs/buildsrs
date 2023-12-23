@@ -9,6 +9,12 @@
 //! traits.
 
 mod api;
+mod files;
 mod state;
 
-pub use crate::state::Backend;
+#[cfg(feature = "frontend-vendor")]
+pub use crate::files::frontend;
+pub use crate::{
+    files::{Files, SharedFiles},
+    state::Backend,
+};

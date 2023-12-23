@@ -4,7 +4,7 @@ The builder is a component that fetches jobs from the backend, builds them
 using [Docker][docker], and pushes the resulting binaries back into the
 backend. This can be replicated as needed for parallel building.
 
-## Services
+## Interactions
 
 ```mermaid
 graph BT
@@ -18,7 +18,7 @@ graph BT
 The builder connects to the backend using a WebSocket. This is the only service
 dependency it has.
 
-## Crates
+## Dependencies
 
 ```mermaid
 graph BT
@@ -34,6 +34,13 @@ graph BT
 The builder is implemented in the [buildsrs_builder][] crate. It depends on
 the [buildsrs_protocol][] crate, which defines the protocol it uses to interact
 with the backend.
+
+## Features
+
+| Name | Description |
+| --- | --- |
+| `docker` | Enables the Docker strategy |
+| `options` | Command-line options parsing |
 
 [docker]: https://docs.docker.com/engine/install/
 [buildsrs_protocol]: /rustdoc/buildsrs_protocol

@@ -1,3 +1,5 @@
+#[cfg(feature = "frontend")]
+use crate::SharedFiles;
 use buildsrs_database::AnyMetadata;
 use buildsrs_storage::AnyStorage;
 
@@ -8,12 +10,32 @@ use buildsrs_storage::AnyStorage;
 pub struct Backend {
     database: AnyMetadata,
     storage: AnyStorage,
+    #[cfg(feature = "frontend")]
+    frontend: SharedFiles,
 }
 
 impl Backend {
     /// Create new backend state from a database connection and storage instance.
     pub fn new(database: AnyMetadata, storage: AnyStorage) -> Self {
-        Backend { database, storage }
+        Backend {
+            database,
+            storage,
+            #[cfg(feature = "frontend")]
+            frontend: Default::default(),
+        }
+    }
+
+    /// Replace frontend files
+    #[cfg(feature = "frontend")]
+    #[must_use]
+    pub fn with_frontend(self, frontend: SharedFiles) -> Self {
+        Self { frontend, ..self }
+    }
+
+    /// Frontend files
+    #[cfg(feature = "frontend")]
+    pub fn frontend(&self) -> &SharedFiles {
+        &self.frontend
     }
 
     /// Return a reference to the database.
