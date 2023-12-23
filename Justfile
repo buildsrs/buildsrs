@@ -73,6 +73,10 @@ check:
     cargo +nightly fmt --check --all
     cargo clippy --workspace --all-features -- -D warnings
 
+# build docs
+docs:
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+
 # run tasks similar to what the CI runs
 ci:
     just check
