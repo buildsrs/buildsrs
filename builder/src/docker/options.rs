@@ -3,7 +3,7 @@ use super::*;
 #[derive(clap::Parser, PartialEq, Debug)]
 pub(crate) struct DockerBuilderOptions {
     /// Docker daemon to connect to
-    #[clap(long, short, env, default_value = "unix:///var/run/docker.sock")]
+    #[clap(long, short, env, default_value = DEFAULT_DOCKER_SOCKET)]
     pub docker: String,
 }
 

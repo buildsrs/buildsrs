@@ -3,8 +3,13 @@ use docker_api::{conn::TtyChunk, Docker};
 use futures::StreamExt;
 use std::path::{Path, PathBuf};
 
+const DEFAULT_DOCKER_SOCKET: &str = "unix:///var/run/docker.sock";
+
 #[cfg(feature = "options")]
 pub(crate) mod options;
+
+#[cfg(test)]
+mod tests;
 
 /// Build strategy that uses Docker.
 #[derive(Clone, Debug)]
@@ -98,6 +103,3 @@ impl Builder for DockerBuilder {
         Ok(serde_json::from_str(&stdout)?)
     }
 }
-
-#[cfg(test)]
-mod tests;

@@ -1,10 +1,28 @@
 use super::*;
 use docker_api::opts::PullOpts;
 
+fn docker_host() -> String {
+    std::env::var("DOCKER_HOST").unwrap_or_else(|_| "unix:///var/run/docker.sock".into())
+}
+
+#[cfg(feature = "options")]
+#[tokio::test]
+async fn test_options() {
+    use clap::Parser;
+    let options = vec![
+        "builder".into(),
+        "--strategy".into(),
+        "docker".into(),
+        "--docker".into(),
+        docker_host(),
+    ];
+    let options = crate::StrategyOptions::try_parse_from(options).unwrap();
+    let _builder = options.build().await.unwrap();
+}
+
 #[tokio::test]
 async fn test_metadata() {
-    let host =
-        std::env::var("DOCKER_HOST").unwrap_or_else(|_| "unix:///var/run/docker.sock".into());
+    let host = docker_host();
     let docker = Docker::new(&host).unwrap();
 
     let images = docker.images();
