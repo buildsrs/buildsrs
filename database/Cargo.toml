@@ -1,7 +1,6 @@
 [package]
 name = "buildsrs-database"
 edition = "2021"
-default-run = "migrate"
 version.workspace = true
 license.workspace = true
 authors.workspace = true
@@ -37,7 +36,7 @@ temp = ["migrations", "dep:rand"]
 options = ["dep:clap"]
 
 [[bin]]
-name = "migrate"
+name = "buildsrs-database"
 required-features = ["tools"]
 
 [[test]]
