@@ -63,7 +63,7 @@ All database interactions are implemented in the [buildsrs_database][] crate.
 | Name | Description |
 | --- | --- |
 | `migrations` | Enables migrations |
-| `tools` | Enables database CLI tools |
+| `cli` | Enables database CLI |
 | `temp` | Creation of temporary databases, used for testing |
 | `options` | Command-line options parsing for database connection |
 

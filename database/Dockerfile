@@ -3,7 +3,7 @@ FROM rust:1.74-bookworm AS builder
 # build
 COPY . /code
 WORKDIR /code
-RUN cargo build --release -p buildsrs-database --features tools --bin migrate
+RUN cargo build --release -p buildsrs-database --features cli
 
 FROM debian:12
 

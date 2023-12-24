@@ -31,13 +31,13 @@ refinery = { version = "0.8.11", features = ["tokio-postgres"] }
 
 [features]
 migrations = ["dep:refinery"]
-tools = ["migrations", "dep:clap"]
+cli = ["migrations", "dep:clap"]
 temp = ["migrations", "dep:rand"]
 options = ["dep:clap"]
 
 [[bin]]
 name = "buildsrs-database"
-required-features = ["tools"]
+required-features = ["cli"]
 
 [[test]]
 name = "postgres"

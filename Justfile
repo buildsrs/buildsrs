@@ -34,7 +34,7 @@ database-dump NAME='latest' DATABASE='postgres':
 
 # run database cli
 database-cli *COMMAND:
-    cargo run -p buildsrs-database --features tools -- --database "{{postgres_str}}" {{COMMAND}}
+    cargo run -p buildsrs-database --features cli -- --database "{{postgres_str}}" {{COMMAND}}
 
 # run unit tests for CRATE only
 test-crate CRATE *ARGS:
