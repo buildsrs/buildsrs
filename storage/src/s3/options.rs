@@ -5,7 +5,7 @@ use aws_sdk_s3::Config;
 use aws_types::region::Region;
 use url::Url;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "options", derive(clap::Parser))]
 pub struct S3Options {
     #[cfg_attr(feature = "options", clap(long, env, required_if_eq("storage", "s3")))]

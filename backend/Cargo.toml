@@ -25,6 +25,16 @@ tracing-subscriber.workspace = true
 tower-http = { version = "0.5.0", features = ["trace"] }
 mime_guess = { version = "2.0.4", optional = true }
 
+[build-dependencies]
+walkdir = "2.4.0"
+
+[dev-dependencies]
+buildsrs-storage = { workspace = true, features = ["temp"] }
+buildsrs-database = { workspace = true, features = ["temp"] }
+tower = "0.4.13"
+http-body-util = "0.1.0"
+test-strategy.workspace = true
+
 [lints]
 workspace = true
 
@@ -35,5 +45,3 @@ frontend = ["dep:mime_guess"]
 # vendor frontend
 frontend-vendor = ["frontend"]
 
-[build-dependencies]
-walkdir = "2.4.0"

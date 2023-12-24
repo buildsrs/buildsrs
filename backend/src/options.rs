@@ -5,7 +5,7 @@ use buildsrs_storage::StorageOptions;
 use clap::Parser;
 use std::net::SocketAddr;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, PartialEq)]
 pub struct Options {
     #[clap(short, long, env = "BUILDSRS_LISTEN", default_value = "0.0.0.0:8000")]
     pub listen: SocketAddr,
@@ -28,4 +28,18 @@ impl Options {
 
         Ok(backend)
     }
+}
+
+#[test]
+fn test_default_options() {
+    let _options = Options::try_parse_from([
+        "backend",
+        "--storage",
+        "filesystem",
+        "--storage-filesystem-path",
+        "/tmp",
+        "--database",
+        "postgres",
+    ])
+    .unwrap();
 }

@@ -7,9 +7,9 @@ enum DatabaseKind {
     Postgres,
 }
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, PartialEq)]
 pub struct DatabaseOptions {
-    #[clap(long, env)]
+    #[clap(long, env = "DATABASE_KIND")]
     database: DatabaseKind,
 
     #[clap(flatten)]
@@ -24,7 +24,7 @@ impl DatabaseOptions {
     }
 }
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, PartialEq)]
 struct PostgresOptions {
     #[clap(long, env)]
     database_postgres: Option<String>,

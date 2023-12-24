@@ -49,7 +49,7 @@ mod options {
     use std::error::Error;
 
     /// Kind of storage to use.
-    #[derive(ValueEnum, Clone, Debug)]
+    #[derive(ValueEnum, Clone, Debug, PartialEq)]
     pub enum StorageKind {
         #[cfg(feature = "filesystem")]
         Filesystem,
@@ -58,7 +58,7 @@ mod options {
     }
 
     /// Options for storage.
-    #[derive(Parser, Clone, Debug)]
+    #[derive(Parser, Clone, Debug, PartialEq)]
     pub struct StorageOptions {
         /// Which storage backend to use.
         #[clap(long)]

@@ -1,7 +1,7 @@
 use super::*;
 use clap::Parser;
 
-#[derive(Parser, Clone, Debug)]
+#[derive(Parser, Clone, Debug, PartialEq)]
 pub struct CacheOptions {
     /// Enables storage cache
     #[clap(long, env)]
