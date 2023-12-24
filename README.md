@@ -1,37 +1,35 @@
 # builds.rs
 
 [![pipeline status](https://gitlab.com/buildsrs/buildsrs/badges/main/pipeline.svg)](https://gitlab.com/buildsrs/buildsrs/-/pipelines)
+[![documentation](https://img.shields.io/badge/docs-main-blue)](https://docs.builds.rs)
+[![rustdoc](https://img.shields.io/badge/rustdoc-main-blue)](https://docs.builds.rs/rustdoc/buildsrs_backend/)
+[![coverage](https://img.shields.io/badge/coverage-main-blue)](https://docs.builds.rs/coverage)
 
-Automated build system for all binary Rust crates on
-[crates.io](https://crates.io).
+Project to provide binary builds automatically for all crates on [crates.io][].
+Aims to provide binaries for multiple targets, driven by metadata specified in
+the Cargo manifest.
 
-The Rust community has built some incredible tools, but some of these are not
-as accessible because the authors might not provide builds for them for all
-relevant platforms, or because they require to be built from source.
+The goal is to be able to easily fetch binary builds for any crate without needing
+a Rust toolchain installed locally:
 
-The goal for this project is to make it easy to use Rust tools and applications
-in the field by providing a convenient service to build binaries for multiple
-platforms and architectures. 
-
-This project itself is written in Rust and is open source to encourage
-contribution.
+```
+curl https://builds.rs/builds/ripgrep/latest/x86_64-unknown-linux-gnu
+```
 
 ## Status
 
-This project is still under heavy development. We are currently aiming to get
-the project into a deployed alpha state as soon as we can so that we can
-collect some data and feedback.
+This project is currently under heavy development. An alpha version is expected
+to be deployed at [builds.rs][] soon. There is a [Discord
+server](https://discord.gg/kfSpdypU) for development-related communication.
 
 ## Getting Started
 
-Documentation is still in the process of being written. 
-
-Check out the [Development guide](docs/guides/development.md) for information
-on how to get started developing this project.
-
-The [Architecture overview](docs/guides/architecture.md) has important context
-for how this project is currently organized in terms of services and code.
+Read the [Developer Documentation](https://docs.builds.rs/developers/intro.html)
+for information on how to get started with [builds.rs][].
 
 ## License
 
 [MIT](LICENSE.md).
+
+[crates.io]: https://crates.io
+[builds.rs]: https://builds.rs
