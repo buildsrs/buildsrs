@@ -13,37 +13,57 @@
 //! Git index and a database connection.
 
 use anyhow::Result;
-use buildsrs_database::AnyMetadata;
+use buildsrs_database::{WriteHandle, AnyMetadata};
 use crates_index::GitIndex;
 use log::*;
-use std::time::Duration;
-use tokio::time::{self, MissedTickBehavior};
+use std::{sync::Arc, time::Duration};
+use tokio::{
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Mutex,
+    },
+    task::spawn_blocking,
+    time::{self, MissedTickBehavior},
+};
+use rayon::iter::ParallelIterator;
 
 /// Synchronize a package registry with the database.
 pub struct Syncer {
     database: AnyMetadata,
-    index: GitIndex,
+    index: Arc<Mutex<GitIndex>>,
 }
 
 impl Syncer {
     /// Create new instance, given a database connection and a [`GitIndex`].
     pub fn new(database: AnyMetadata, index: GitIndex) -> Self {
-        Self { database, index }
+        Self {
+            database,
+            index: Arc::new(Mutex::new(index)),
+        }
     }
 
     /// Run a single synchronization.
     pub async fn sync(&mut self) -> Result<()> {
         info!("Updating crate index");
-        self.index.update()?;
 
-        let writer = self.database.write().await.unwrap();
+        let mut index = self.index.clone().lock_owned().await;
+        spawn_blocking(move || index.update()).await??;
+
+        let transaction = self.database.write().await.unwrap();
 
         info!("Updating crates from index");
-        for krate in self.index.crates() {
-            if let Some(krate) = self.index.crate_(krate.name()) {
-                writer.crate_add(krate.name()).await.unwrap();
+        let index = self.index.clone().lock_owned().await;
+        let (sender, mut receiver) = channel(128);
+
+        let reader = spawn_blocking(move || {
+            index.crates_parallel().try_for_each(|krate| Ok(sender.blocking_send(krate?)?) as Result<_>)
+        });
+
+        let writer = async move {
+            while let Some(krate) = receiver.recv().await {
+                transaction.crate_add(krate.name()).await.unwrap();
                 for version in krate.versions() {
-                    writer
+                    transaction
                         .crate_version_add(
                             krate.name(),
                             version.version(),
@@ -53,14 +73,22 @@ impl Syncer {
                         .await
                         .unwrap();
                 }
-                writer
-                    .tasks_create_all("metadata", "generic")
-                    .await
-                    .unwrap();
             }
-        }
 
-        writer.commit().await.unwrap();
+            transaction
+                .tasks_create_all("metadata", "generic")
+                .await
+                .unwrap();
+
+            Ok(transaction) as Result<_>
+        };
+
+        let (reader, writer) = futures::future::join(reader, writer).await;
+        reader??;
+        let transaction: Box<dyn WriteHandle> = writer?;
+
+        transaction.commit().await.unwrap();
+
         Ok(())
     }
 

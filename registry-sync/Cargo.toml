@@ -7,7 +7,7 @@ authors.workspace = true
 
 [dependencies]
 clap = { workspace = true, features = ["derive", "env"] }
-crates-index = { version = "2.2.0", features = ["git", "git-https", "git-performance"] }
+crates-index = { version = "2.2.0", features = ["git", "git-https", "git-performance", "parallel"] }
 env_logger = "0.10.0"
 humantime = "2.1.0"
 log = "0.4.20"
@@ -16,6 +16,8 @@ tokio.workspace = true
 buildsrs-database = { workspace = true, features = ["options"] }
 anyhow.workspace = true
 hex = "0.4.3"
+rayon = "1.8.0"
+futures.workspace = true
 
 [lints]
 workspace = true

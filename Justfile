@@ -58,7 +58,7 @@ backend:
 
 # launch registry sync
 registry-sync:
-    RUST_LOG=debug cargo run -p buildsrs-registry-sync -- --path /tmp/registry --database postgres --database-postgres "{{postgres_str}}"
+    RUST_LOG=debug cargo run -p buildsrs-registry-sync --release -- --path /tmp/registry --database postgres --database-postgres "{{postgres_str}}"
 
 # launch builder
 builder:
