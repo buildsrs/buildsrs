@@ -26,6 +26,14 @@ pub struct Options {
     database: DatabaseOptions,
 }
 
+#[test]
+fn can_parse_options() {
+    let path = "/path";
+    let options = ["sync", "--path", path, "--database", "postgres"];
+    let options = Options::try_parse_from(options).unwrap();
+    assert_eq!(options.path, PathBuf::from(path));
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     env_logger::init();
