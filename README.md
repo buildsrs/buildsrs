@@ -4,6 +4,7 @@
 [![documentation](https://img.shields.io/badge/docs-main-blue)](https://docs.builds.rs)
 [![rustdoc](https://img.shields.io/badge/rustdoc-main-blue)](https://docs.builds.rs/rustdoc/buildsrs_backend/)
 [![coverage](https://img.shields.io/badge/coverage-main-blue)](https://docs.builds.rs/coverage)
+[![dependency status](https://deps.rs/repo/github/buildsrs/buildsrs/status.svg)](https://deps.rs/repo/github/buildsrs/buildsrs)
 
 Project to provide binary builds automatically for all crates on [crates.io][].
 Aims to provide binaries for multiple targets, driven by metadata specified in
