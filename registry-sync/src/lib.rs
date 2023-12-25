@@ -13,19 +13,21 @@
 //! Git index and a database connection.
 
 use anyhow::Result;
-use buildsrs_database::{WriteHandle, AnyMetadata};
+use buildsrs_database::{AnyMetadata, WriteHandle};
 use crates_index::GitIndex;
+use futures::{
+    future::join,
+    stream::{iter, once, StreamExt, TryStreamExt},
+    Future,
+};
 use log::*;
-use std::{sync::Arc, time::Duration};
+use std::{pin::Pin, sync::Arc, time::Duration};
 use tokio::{
-    sync::{
-        mpsc::{channel, Receiver, Sender},
-        Mutex,
-    },
+    sync::{mpsc::channel, Mutex},
     task::spawn_blocking,
     time::{self, MissedTickBehavior},
 };
-use rayon::iter::ParallelIterator;
+use tokio_stream::wrappers::ReceiverStream;
 
 /// Synchronize a package registry with the database.
 pub struct Syncer {
@@ -49,45 +51,68 @@ impl Syncer {
         let mut index = self.index.clone().lock_owned().await;
         spawn_blocking(move || index.update()).await??;
 
-        let transaction = self.database.write().await.unwrap();
+        let handle = self.database.write().await.unwrap();
 
         info!("Updating crates from index");
         let index = self.index.clone().lock_owned().await;
-        let (sender, mut receiver) = channel(128);
+        let (sender, receiver) = channel(1024);
 
         let reader = spawn_blocking(move || {
-            index.crates_parallel().try_for_each(|krate| Ok(sender.blocking_send(krate?)?) as Result<_>)
+            for krate in index.crates() {
+                sender.blocking_send(krate)?;
+            }
+            Ok(()) as Result<()>
         });
 
         let writer = async move {
-            while let Some(krate) = receiver.recv().await {
-                transaction.crate_add(krate.name()).await.unwrap();
-                for version in krate.versions() {
-                    transaction
-                        .crate_version_add(
-                            krate.name(),
-                            version.version(),
-                            &hex::encode(version.checksum()),
-                            version.is_yanked(),
-                        )
-                        .await
-                        .unwrap();
-                }
-            }
+            let handle_ref = &handle;
+            ReceiverStream::new(receiver)
+                .enumerate()
+                .flat_map(move |(index, krate)| {
+                    info!("Syncing crate #{index} {}", krate.name());
+                    let name = krate.name().to_string();
+                    let versions = krate.versions().to_vec();
+                    #[allow(clippy::async_yields_async)]
+                    let stream = once(async move {
+                        Box::pin(async move {
+                            handle_ref.crate_add(&name).await.unwrap();
+                            Ok(()) as Result<()>
+                        }) as Pin<Box<dyn Future<Output = Result<()>>>>
+                    })
+                    .chain(iter(versions.into_iter()).map(move |version| {
+                        let name = krate.name().to_string();
+                        Box::pin(async move {
+                            handle_ref
+                                .crate_version_add(
+                                    &name,
+                                    version.version(),
+                                    &hex::encode(version.checksum()),
+                                    version.is_yanked(),
+                                )
+                                .await
+                                .unwrap();
+                            Ok(()) as Result<()>
+                        }) as Pin<Box<dyn Future<Output = Result<()>>>>
+                    }));
 
-            transaction
+                    stream
+                })
+                .buffer_unordered(128)
+                .try_collect::<()>()
+                .await?;
+
+            handle
                 .tasks_create_all("metadata", "generic")
                 .await
                 .unwrap();
 
-            Ok(transaction) as Result<_>
+            Ok(handle) as Result<_>
         };
 
-        let (reader, writer) = futures::future::join(reader, writer).await;
+        let (reader, handle) = join(reader, writer).await;
         reader??;
-        let transaction: Box<dyn WriteHandle> = writer?;
-
-        transaction.commit().await.unwrap();
+        let handle: Box<dyn WriteHandle> = handle?;
+        handle.commit().await.unwrap();
 
         Ok(())
     }

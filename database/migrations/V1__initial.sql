@@ -49,9 +49,10 @@ CREATE TABLE "crates" (
 CREATE TABLE "crate_versions" (
     "id" BIGSERIAL PRIMARY KEY,
     "crate" BIGINT NOT NULL REFERENCES crates(id) ON DELETE CASCADE,
-    "version" TEXT NOT NULL UNIQUE,
+    "version" TEXT NOT NULL,
     "checksum" TEXT NOT NULL,
-    "yanked" BOOLEAN NOT NULL
+    "yanked" BOOLEAN NOT NULL,
+    UNIQUE ("crate", "version")
 );
 
 -- job stages
@@ -199,3 +200,45 @@ CREATE VIEW "crate_versions_view" AS
     JOIN crate_versions
         ON crates.id = crate_versions.crate;
 
+-- handle insertion on crate_versions_view: do an insert or update.
+CREATE OR REPLACE FUNCTION crate_versions_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO crate_versions(crate, version, checksum, yanked)
+    VALUES (
+        (SELECT id FROM crates WHERE name = NEW.name),
+        NEW.version, NEW.checksum, NEW.yanked
+    )
+    ON CONFLICT (crate, version) DO UPDATE
+    SET
+        yanked = NEW.yanked,
+        checksum = NEW.checksum;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER crate_versions_insert_trigger
+INSTEAD OF INSERT ON crate_versions_view
+FOR EACH ROW EXECUTE FUNCTION crate_versions_insert();
+
+-- update: ensure that checksum is never updated, only update if changed.
+CREATE OR REPLACE FUNCTION crate_versions_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- cannot change checksum!
+    IF OLD.checksum != NEW.checksum THEN
+        RAISE EXCEPTION 'changed_checksum';
+    END IF;
+
+    IF (OLD IS DISTINCT FROM NEW) THEN
+        UPDATE crate_versions
+        SET yanked = NEW.yanked
+        WHERE id = OLD.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER crate_versions_update_trigger
+INSTEAD OF UPDATE ON crate_versions_view
+FOR EACH ROW EXECUTE FUNCTION crate_versions_update();

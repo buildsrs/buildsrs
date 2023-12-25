@@ -116,12 +116,8 @@ statements!(
 
     /// Add a crate version to the database.
     fn crate_version_add(krate: &str, version: &str, checksum: &str, yanked: bool) {
-        "INSERT INTO crate_versions(crate, version, checksum, yanked)
-        VALUES (
-            (SELECT id FROM crates WHERE name = $1),
-            $2, $3, $4
-        )
-        ON CONFLICT (version) DO UPDATE SET yanked = $4"
+        "INSERT INTO crate_versions_view(name, version, checksum, yanked)
+        VALUES ($1, $2, $3, $4)"
     }
 
     /// Set the job's current stage.
