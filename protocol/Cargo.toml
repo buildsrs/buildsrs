@@ -16,6 +16,7 @@ uuid = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
 rand_core = { workspace = true, features = ["getrandom"] }
+serde_test = "1.0.176"
 
 [lints]
 workspace = true
