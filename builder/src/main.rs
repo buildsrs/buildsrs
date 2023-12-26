@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
         Command::Build(build) => {
             let strategy = options.strategy.build().await?;
             let dir = TempDir::new()?;
-            println!("dir is {dir:?}");
+            info!("dir is {dir:?}");
 
             let crate_file = client.get(build.source.as_str()).send().await?;
             let mut stream = crate_file.bytes_stream();
@@ -132,7 +132,7 @@ async fn main() -> Result<()> {
             }
             file.flush().await?;
 
-            println!("Downloaded crate");
+            info!("Downloaded crate");
 
             let download_folder_clone = download_folder.clone();
             tokio::spawn(async move {
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
             })
             .await??;
 
-            println!("Extracted crate");
+            info!("Extracted crate");
 
             // find crate subfolder
             let mut download_folder = tokio::fs::read_dir(&download_folder_clone).await?;

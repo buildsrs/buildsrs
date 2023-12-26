@@ -11,6 +11,7 @@ use axum::{
 use buildsrs_database::{entity::Builder, Error as DatabaseError};
 use buildsrs_protocol::{ssh_key::Fingerprint, *};
 use futures::StreamExt;
+use tracing::*;
 
 #[derive(thiserror::Error, Debug)]
 pub enum WebSocketError {
@@ -128,7 +129,7 @@ async fn jobs_websocket(State(backend): State<Backend>, ws: WebSocketUpgrade) ->
         async move {
             match backend.handle_jobs(socket).await {
                 Ok(()) => {}
-                Err(error) => println!("{error}"),
+                Err(error) => error!("{error:#}"),
             }
         }
     })
