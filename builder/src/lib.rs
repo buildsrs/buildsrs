@@ -20,6 +20,11 @@ mod options;
 #[cfg(feature = "options")]
 pub use options::StrategyOptions;
 
+#[cfg(feature = "websocket")]
+mod websocket;
+#[cfg(feature = "websocket")]
+pub use websocket::Connection;
+
 /// Represents a strategy for building artifacts.
 ///
 /// A strategy is able to create a builder instance for a given crate. For example, building
