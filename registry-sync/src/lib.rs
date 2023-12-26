@@ -35,6 +35,11 @@ pub struct Syncer {
     index: Arc<Mutex<GitIndex>>,
 }
 
+/// Length of the crates queue.
+const CRATES_QUEUE_LENGTH: usize = 1024;
+/// How many database requests to keep in-flight in parallel at any given time.
+const DATABASE_PIPELINED_REQUESTS: usize = 128;
+
 impl Syncer {
     /// Create new instance, given a database connection and a [`GitIndex`].
     pub fn new(database: AnyMetadata, index: GitIndex) -> Self {
@@ -44,19 +49,23 @@ impl Syncer {
         }
     }
 
-    /// Run a single synchronization.
-    pub async fn sync(&mut self) -> Result<()> {
-        info!("Updating crate index");
-
+    /// Updates crates index.
+    ///
+    /// This will cause a network access, because it will attempt to fetch the latest state from
+    /// the remote crates index using git.
+    pub async fn update(&self) -> Result<()> {
         let mut index = self.index.clone().lock_owned().await;
         spawn_blocking(move || index.update()).await??;
+        Ok(())
+    }
 
+    /// Synchronize crate index with database.
+    pub async fn sync(&self) -> Result<()> {
         let handle = self.database.write().await.unwrap();
-
-        info!("Updating crates from index");
         let index = self.index.clone().lock_owned().await;
-        let (sender, receiver) = channel(1024);
+        let (sender, receiver) = channel(CRATES_QUEUE_LENGTH);
 
+        // launch a blocking reader which emits a stream of crates into a queue
         let reader = spawn_blocking(move || {
             for krate in index.crates() {
                 sender.blocking_send(krate)?;
@@ -64,12 +73,14 @@ impl Syncer {
             Ok(()) as Result<()>
         });
 
+        // launch a writer, which turns the crates into a stream of database
+        // writes. the database writes are pipelined.
         let writer = async move {
             let handle_ref = &handle;
             ReceiverStream::new(receiver)
                 .enumerate()
                 .flat_map(move |(index, krate)| {
-                    info!("Syncing crate #{index} {}", krate.name());
+                    debug!("Syncing crate #{index} {}", krate.name());
                     let name = krate.name().to_string();
                     let versions = krate.versions().to_vec();
                     #[allow(clippy::async_yields_async)]
@@ -97,10 +108,11 @@ impl Syncer {
 
                     stream
                 })
-                .buffer_unordered(128)
+                .buffer_unordered(DATABASE_PIPELINED_REQUESTS)
                 .try_collect::<()>()
                 .await?;
 
+            debug!("Creating metadata tasks");
             handle
                 .tasks_create_all("metadata", "generic")
                 .await
@@ -112,7 +124,10 @@ impl Syncer {
         let (reader, handle) = join(reader, writer).await;
         reader??;
         let handle: Box<dyn WriteHandle> = handle?;
+
+        info!("Committing changes");
         handle.commit().await.unwrap();
+        info!("Done synchronizing");
 
         Ok(())
     }
@@ -124,6 +139,11 @@ impl Syncer {
         timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
         loop {
             timer.tick().await;
+
+            info!("Updating crate index");
+            self.update().await?;
+
+            info!("Synchronizing crate index");
             self.sync().await?;
         }
     }
