@@ -8,6 +8,7 @@ use gix::{
         tree::{Entry, EntryKind},
         Tree,
     },
+    ObjectId,
 };
 use proptest::{arbitrary::any, strategy::Strategy};
 use serde::Serialize;
@@ -135,7 +136,7 @@ async fn can_sync(crates: Vec<Crate>) {
             "FETCH_HEAD",
             "Initial commit",
             tree,
-            vec![] as Vec<&[u8]>,
+            std::iter::empty::<ObjectId>(),
         )
         .unwrap();
 
