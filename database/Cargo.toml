@@ -15,7 +15,7 @@ postgres-types = { version = "0.2.6", features = ["derive"] }
 rand = { version = "0.8.5", optional = true }
 refinery = { version = "0.8.11", features = ["tokio-postgres"], optional = true }
 ssh-key = { workspace = true, features = ["ed25519"] }
-strum = { version = "0.25.0", features = ["derive"] }
+strum.workspace = true
 thiserror.workspace = true
 time = "0.3.30"
 tokio = { workspace = true, features = ["macros", "sync", "rt", "fs"] }

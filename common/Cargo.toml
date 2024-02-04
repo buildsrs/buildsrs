@@ -11,7 +11,7 @@ proptest = { workspace = true, optional = true }
 semver = "1.0.20"
 serde = { workspace = true, features = ["derive"], optional = true }
 ssh-key.workspace = true
-strum = { version = "0.25.0", features = ["derive"] }
+strum.workspace = true
 test-strategy = { workspace = true, optional = true }
 url = { workspace = true, features = ["serde"] }
 uuid.workspace = true
