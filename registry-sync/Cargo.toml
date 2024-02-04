@@ -10,7 +10,6 @@ anyhow.workspace = true
 buildsrs-database = { workspace = true, features = ["options"] }
 clap = { workspace = true, features = ["derive", "env"] }
 crates-index = { version = "2.2.0", features = ["git", "git-https", "git-performance"] }
-env_logger = "0.10.0"
 futures.workspace = true
 hex = "0.4.3"
 humantime = "2.1.0"
@@ -19,6 +18,8 @@ tempfile = { version = "3.8.1", optional = true }
 tokio-stream = "0.1.14"
 tokio.workspace = true
 url.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

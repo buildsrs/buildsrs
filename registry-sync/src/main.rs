@@ -36,7 +36,7 @@ fn can_parse_options() {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
     let options = Options::parse();
 
     info!("Connecting to database");
