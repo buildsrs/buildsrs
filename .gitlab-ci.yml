@@ -35,9 +35,6 @@ variables:
     - wget -qO- https://github.com/thedodd/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- -C /usr/local/bin
     - apt update
     - apt install -y cmake
-    - sccache --start-server
-  after_script:
-    - sccache --stop-server
 
 .services:
   services:
