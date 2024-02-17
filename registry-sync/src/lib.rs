@@ -16,12 +16,11 @@ use anyhow::{anyhow, Result};
 use buildsrs_database::{AnyMetadata, WriteHandle};
 use crates_index::GitIndex;
 use futures::{
-    future::join,
+    future::{join, ready, FutureExt},
     stream::{iter, once, StreamExt, TryStreamExt},
-    Future,
 };
 use log::*;
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::{
     sync::{mpsc::channel, Mutex},
     task::spawn_blocking,
@@ -84,15 +83,16 @@ impl Syncer {
                     let name = krate.name().to_string();
                     let versions = krate.versions().to_vec();
                     #[allow(clippy::async_yields_async)]
-                    let stream = once(async move {
-                        Box::pin(async move {
+                    once(ready(
+                        async move {
                             handle_ref.crate_add(&name).await.map_err(|e| anyhow!(e))?;
                             Ok(()) as Result<()>
-                        }) as Pin<Box<dyn Future<Output = Result<()>>>>
-                    })
+                        }
+                        .boxed(),
+                    ))
                     .chain(iter(versions.into_iter()).map(move |version| {
                         let name = krate.name().to_string();
-                        Box::pin(async move {
+                        async move {
                             handle_ref
                                 .crate_version_add(
                                     &name,
@@ -103,10 +103,9 @@ impl Syncer {
                                 .await
                                 .map_err(|e| anyhow!(e))?;
                             Ok(()) as Result<()>
-                        }) as Pin<Box<dyn Future<Output = Result<()>>>>
-                    }));
-
-                    stream
+                        }
+                        .boxed()
+                    }))
                 })
                 .buffer_unordered(DATABASE_PIPELINED_REQUESTS)
                 .try_collect::<()>()
