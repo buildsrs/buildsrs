@@ -158,6 +158,7 @@ impl Connection {
         }
     }
 
+    #[allow(clippy::no_effect_underscore_binding)]
     async fn job(_job: Job, _sender: Sender<Event>) {
         todo!()
     }

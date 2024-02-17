@@ -92,6 +92,7 @@ impl Connection {
         }
     }
 
+    #[allow(clippy::no_effect_underscore_binding)]
     async fn handle_job_request(
         &mut self,
         _request: &JobRequest,

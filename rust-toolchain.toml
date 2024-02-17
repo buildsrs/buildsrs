@@ -1,0 +1,4 @@
+[toolchain]
+channel = "1.76"
+components = [ "clippy", "llvm-tools" ]
+targets = [ "wasm32-unknown-unknown" ]

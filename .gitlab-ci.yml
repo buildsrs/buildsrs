@@ -16,7 +16,7 @@ variables:
   CARGO_LLVM_COV_VERSION: 0.5.39
   CARGO_HACK_VERSION: 0.6.15
   CARGO_DENY_VERSION: 0.14.3
-  RUST_VERSION: "1.74"
+  RUST_VERSION: "1.76"
 
 .rust:
   image: rust:$RUST_VERSION-bookworm
