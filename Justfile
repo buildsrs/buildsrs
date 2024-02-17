@@ -83,12 +83,16 @@ ci:
     just test
     just docker-build-all
 
+docker-build-rust:
+    docker build . -t {{docker_image}}/rust
+
 # build docker container of the given component
 docker-build COMPONENT:
     docker build . -f {{COMPONENT}}/Dockerfile -t {{docker_image}}/{{COMPONENT}}
 
 # build all docker containers
 docker-build-all:
+    just docker-build-rust
     just docker-build backend
     just docker-build registry-sync
     just docker-build builder

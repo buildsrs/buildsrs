@@ -1,4 +1,5 @@
 stages:
+  - setup
   - check
   - build
   - deploy
@@ -67,6 +68,22 @@ variables:
   script:
     - docker build . -f $FOLDER/Dockerfile -t $CI_REGISTRY_IMAGE/$FOLDER:$CI_COMMIT_REF_SLUG
     - docker push "$CI_REGISTRY_IMAGE/$FOLDER:$CI_COMMIT_REF_SLUG"
+
+docker:rust:
+  stage: setup
+  image: docker
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build . -f Dockerfile -t $CI_REGISTRY_IMAGE/rust
+    - docker push "$CI_REGISTRY_IMAGE/rust"
+  only:
+    changes:
+      - Dockerfile
+    refs:
+      - main
 
 tests:
   extends: [".rust", ".services"]
