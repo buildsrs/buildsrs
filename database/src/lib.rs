@@ -21,11 +21,8 @@ mod options;
 #[cfg(feature = "options")]
 pub use options::DatabaseOptions;
 
-/// Shared generic error type.
-pub type SharedError = Arc<dyn std::error::Error + Send + Sync>;
-
 /// Boxed generic error type.
-pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
+pub type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
 /// Shared generic metadata instance.
 ///

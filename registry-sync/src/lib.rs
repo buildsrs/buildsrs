@@ -12,7 +12,7 @@
 //! This crate exports a [`Syncer`] type, which implements the synchronization between a given
 //! Git index and a database connection.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use buildsrs_database::{AnyMetadata, WriteHandle};
 use crates_index::GitIndex;
 use futures::{
@@ -61,7 +61,7 @@ impl Syncer {
 
     /// Synchronize crate index with database.
     pub async fn sync(&self) -> Result<()> {
-        let handle = self.database.write().await.unwrap();
+        let handle = self.database.write().await.map_err(|e| anyhow!(e))?;
         let index = self.index.clone().lock_owned().await;
         let (sender, receiver) = channel(CRATES_QUEUE_LENGTH);
 
@@ -86,7 +86,7 @@ impl Syncer {
                     #[allow(clippy::async_yields_async)]
                     let stream = once(async move {
                         Box::pin(async move {
-                            handle_ref.crate_add(&name).await.unwrap();
+                            handle_ref.crate_add(&name).await.map_err(|e| anyhow!(e))?;
                             Ok(()) as Result<()>
                         }) as Pin<Box<dyn Future<Output = Result<()>>>>
                     })
@@ -101,7 +101,7 @@ impl Syncer {
                                     version.is_yanked(),
                                 )
                                 .await
-                                .unwrap();
+                                .map_err(|e| anyhow!(e))?;
                             Ok(()) as Result<()>
                         }) as Pin<Box<dyn Future<Output = Result<()>>>>
                     }));
@@ -116,7 +116,7 @@ impl Syncer {
             handle
                 .tasks_create_all("metadata", "generic")
                 .await
-                .unwrap();
+                .map_err(|e| anyhow!(e))?;
 
             Ok(handle) as Result<_>
         };
@@ -126,7 +126,7 @@ impl Syncer {
         let handle: Box<dyn WriteHandle> = handle?;
 
         info!("Committing changes");
-        handle.commit().await.unwrap();
+        handle.commit().await.map_err(|e| anyhow!(e))?;
         info!("Done synchronizing");
 
         Ok(())
