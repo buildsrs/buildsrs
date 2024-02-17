@@ -8,8 +8,8 @@ use axum::{
     routing::get,
     Router,
 };
-use buildsrs_database::{entity::Builder, Error as DatabaseError};
-use buildsrs_protocol::{ssh_key::Fingerprint, *};
+use buildsrs_database::{entity::Builder, AnyMetadata, Error as DatabaseError};
+use buildsrs_protocol::{ssh_key::Fingerprint, types::JobKind, *};
 use futures::StreamExt;
 use tracing::*;
 
@@ -49,6 +49,7 @@ async fn extract_fingerprint(socket: &mut WebSocket) -> Result<Fingerprint, WebS
 struct Connection {
     websocket: WebSocket,
     builder: Builder,
+    database: AnyMetadata,
 }
 
 impl Connection {
@@ -72,6 +73,7 @@ impl Connection {
     }
 
     async fn challenge(&mut self) -> Result<(), WebSocketError> {
+        // FIXME: randomize this!
         let challenge = [0xab].to_vec();
         self.send(ServerMessage::ChallengeRequest(challenge.clone().into()))
             .await?;
@@ -92,9 +94,18 @@ impl Connection {
 
     async fn handle_job_request(
         &mut self,
-        _request: &JobRequest,
+        request: &JobRequest,
     ) -> Result<ServerMessage, WebSocketError> {
-        todo!()
+        let writer = self.database.write().await.unwrap();
+        let job = writer.job_request(self.builder.uuid).await.unwrap();
+        let job = writer.job_info(job).await.unwrap();
+        Ok(ServerMessage::JobResponse(Job {
+            kind: JobKind::Metadata,
+            name: job.name,
+            source: "https://example.com".parse().unwrap(),
+            uuid: job.uuid,
+            version: job.version,
+        }))
     }
 
     async fn handle(&mut self) -> Result<(), WebSocketError> {
@@ -116,7 +127,11 @@ impl Backend {
         let database = self.database().read().await.unwrap();
         let uuid = database.builder_lookup(&fingerprint.to_string()).await?;
         let builder = database.builder_get(uuid).await?;
-        let mut connection = Connection { websocket, builder };
+        let mut connection = Connection {
+            websocket,
+            builder,
+            database: self.database().clone(),
+        };
         connection.challenge().await?;
         connection.handle().await?;
         Ok(())

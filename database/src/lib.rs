@@ -60,6 +60,8 @@ pub trait ReadHandle: Send + Sync {
     async fn crate_info(&self, name: &str) -> Result<CrateInfo, Error>;
     async fn crate_versions(&self, name: &str) -> Result<Vec<String>, Error>;
     async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error>;
+
+    async fn job_info(&self, job: Uuid) -> Result<JobInfo, Error>;
 }
 
 /// Handle used for writing to the metadata service.
@@ -79,5 +81,6 @@ pub trait WriteHandle: ReadHandle + Send + Sync {
     ) -> Result<(), BoxError>;
 
     async fn tasks_create_all(&self, kind: &str, triple: &str) -> Result<(), BoxError>;
+    async fn job_request(&self, builder: Uuid) -> Result<Uuid, BoxError>;
     async fn commit(self: Box<Self>) -> Result<(), BoxError>;
 }
