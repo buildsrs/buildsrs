@@ -34,12 +34,16 @@ There are two targets that are useful for running tests. Both of these targets
 require a running database, but they do not require the database to be migrated
 as they create temporary virtual databases.
 
-```
-# run all unit tests
-just test
+You can run all tests like this:
 
-# run only database unit tests
-just database-test
+```
+just test
+```
+
+If you only want to run tests for a specific crate, you can run them like this:
+
+```
+just test-crate database
 ```
 
 ### Coverage
@@ -53,6 +57,9 @@ There is a useful target for running the coverage tests.
 ```
 just coverage
 ```
+
+[Here](/coverage/) you can see the latest coverage from the `main` branch to
+compare it against.
 
 ## Database
 

@@ -1,32 +1,39 @@
 # Components
 
-This chapter explores the architecture of this project both in terms of deployed services
-as well as in terms of crates.
+This chapter explores the architecture of this project both in terms of
+deployed services as well as in terms of crates.
 
 ## Services
 
 ```mermaid
 graph BT
     Storage[fa:fa-database Storage]
-    subgraph Deployment
-        direction BT
-        Database[fa:fa-database Database]
-        Sync[fa:fa-download Registry Sync] --> Database
-        Backend[fa:fa-server Backend]
-        Backend  --> Database
-        Builder[fa:fa-wrench Builder] --> Backend
-    end
-    Backend  --> Storage
+    Database[fa:fa-database Database]
     Frontend[fa:fa-globe Frontend]
+    subgraph builds.rs
+        Backend[fa:fa-server Backend]
+        Sync[fa:fa-download Registry Sync] 
+        Builder[fa:fa-wrench Builder]
+        Builder --> Backend
+    end
+    Sync --> Database
+    Backend  --> Database
+    Backend  --> Storage
     Frontend --> Storage
     Frontend --> Backend
 ```
 
-This project uses a microservices architecture. Every component that needs deployment
-is built into a Docker container in the CI, and then deployed on a cluster. There are
-only two components that are persistent: storage and the database. The storage component
-is usually any S3-compatible storage provider, and the database is typically a Postgres
-database.
+This project uses somewhat of a [microservice][] architecture, although one
+could argue that since most of the action happens in the single backend
+component, it is more of a monolith. 
+
+Every component that needs deployment is built into a Docker container in the
+CI, and then deployed on a cluster. 
+
+There are only two components that are external and persistent: storage and the
+database. These are abstracted away in the code. The storage component is
+usually any S3-compatible storage provider, and the database is typically a
+Postgres database.
 
 ## Crates
 
@@ -60,10 +67,13 @@ graph BT
     click storage "/rustdoc/buildsrs_storage"
 ```
 
-Code-wise, this project is a Cargo workspace with multiple crates. Every target
-that needs to be built is it's own crate. In addition to that, any code that
-needs to be used from multiple target crates is split out into it's own crate.
+Code-wise, this project is a [Cargo workspace][workspace] with multiple crates.
+Every target that needs to be built is it's own crate. In addition to that, any
+code that needs to be used from multiple target crates is split out into it's
+own crate.
 
-The next chapters will deal with each of these components, explaining what they do
-and how they are related to the other components.
+The next chapters will deal with each of these components, explaining what they
+do and how they are related to the other components.
 
+[workspace]: https://doc.rust-lang.org/cargo/reference/workspaces.html
+[microservice]: https://martinfowler.com/articles/microservices.html
