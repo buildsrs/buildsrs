@@ -2,6 +2,7 @@ use super::*;
 use docker_api::{conn::TtyChunk, Docker};
 use futures::StreamExt;
 use std::path::{Path, PathBuf};
+use tracing::info;
 
 const DEFAULT_DOCKER_SOCKET: &str = "unix:///var/run/docker.sock";
 
@@ -79,12 +80,12 @@ impl Builder for DockerBuilder {
             .build();
         let container = containers.create(&opts).await?;
 
-        println!("Created docker container");
+        info!("Created docker container");
 
         let mut output = container.attach().await?;
         container.start().await?;
 
-        println!("Launched docker container");
+        info!("Launched docker container");
 
         let mut stderr = vec![];
         let mut stdout = vec![];

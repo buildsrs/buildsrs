@@ -25,9 +25,12 @@ uuid = { workspace = true, features = ["v4"] }
 [dev-dependencies]
 buildsrs-common = { workspace = true, features = ["proptest"] }
 lzma-rs = "0.3.0"
+proptest.workspace = true
 rand = { version = "0.8.5" }
 rand_core.workspace = true
 refinery = { version = "0.8.11", features = ["tokio-postgres"] }
+test-strategy.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
 migrations = ["dep:refinery"]
@@ -41,6 +44,10 @@ required-features = ["cli"]
 
 [[test]]
 name = "postgres"
+required-features = ["temp"]
+
+[[test]]
+name = "tests"
 required-features = ["temp"]
 
 [lints]
