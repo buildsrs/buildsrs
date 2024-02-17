@@ -11,18 +11,11 @@ default:
 
 variables:
   # versions of tools used in this pipeline
-  SCCACHE_VERSION: 0.7.4
-  TRUNK_VERSION: 0.18.3
   MDBOOK_MERMAID_VERSION: 0.13.0
-  CARGO_LLVM_COV_VERSION: 0.5.39
-  CARGO_HACK_VERSION: 0.6.15
-  CARGO_DENY_VERSION: 0.14.3
-  RUST_VERSION: "1.76"
 
 .rust:
-  image: rust:$RUST_VERSION-bookworm
+  image: registry.gitlab.com/buildsrs/buildsrs/rust
   variables:
-    RUSTC_WRAPPER: /usr/local/bin/sccache
     SCCACHE_IDLE_TIMEOUT: "1200"
     RUSTDOCFLAGS: "-D warnings"
     CARGO_PROFILE_DEV_DEBUG: "limited"
@@ -30,12 +23,6 @@ variables:
     CARGO_PROFILE_BENCH_DEBUG: "limited"
     CARGO_PROFILE_RELEASE_DEBUG: "limited"
     CARGO_INCREMENTAL: "0"
-  before_script:
-    - curl -sSL "https://github.com/mozilla/sccache/releases/download/v$SCCACHE_VERSION/sccache-v$SCCACHE_VERSION-x86_64-unknown-linux-musl.tar.gz" | tar -xzf- -C /usr/local/bin --strip-components=1
-    - rustup target add wasm32-unknown-unknown
-    - wget -qO- https://github.com/thedodd/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- -C /usr/local/bin
-    - apt update
-    - apt install -y cmake
 
 .services:
   services:
@@ -95,8 +82,6 @@ coverage:
   extends: [".rust", ".services"]
   stage: check
   script:
-    - curl -sSL "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${CARGO_LLVM_COV_VERSION}/cargo-llvm-cov-aarch64-unknown-linux-musl.tar.gz" | tar zxv -C /usr/local/bin
-    - rustup component add llvm-tools
     - cargo llvm-cov --all-features --html --fail-under-lines 30 --ignore-run-fail
   artifacts:
     paths:
@@ -124,7 +109,6 @@ dependencies:
   extends: [".rust"]
   stage: check
   script:
-    - curl -sSL "https://github.com/EmbarkStudios/cargo-deny/releases/download/$CARGO_DENY_VERSION/cargo-deny-$CARGO_DENY_VERSION-x86_64-unknown-linux-musl.tar.gz" | tar zxv -C /usr/local/bin --strip-components=1
     - cargo deny check
 
 rustdoc:
@@ -164,20 +148,6 @@ registry-sync:
   extends: [".docker"]
   variables:
     FOLDER: registry-sync
-  only:
-    - main
-    - prod
-
-frontend:
-  stage: build
-  extends: [".rust"]
-  script:
-    - rustup target add wasm32-unknown-unknown
-    - wget -qO- https://github.com/thedodd/trunk/releases/download/v${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf- -C /usr/local/bin
-    - cd frontend && trunk build --release
-  artifacts:
-    paths:
-      - frontend/dist
   only:
     - main
     - prod
