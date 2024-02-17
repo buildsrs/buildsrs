@@ -69,6 +69,7 @@ docker:rust:
   only:
     changes:
       - Dockerfile
+      - rust-toolchain.toml
     refs:
       - main
 

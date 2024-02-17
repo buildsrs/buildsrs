@@ -1,4 +1,4 @@
-FROM rust:1.74-bookworm AS builder
+FROM registry.gitlab.com/buildsrs/buildsrs/rust AS builder
 
 # build
 COPY . /code
