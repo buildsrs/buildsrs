@@ -690,6 +690,10 @@ where
         self.database().crate_versions(name).await
     }
 
+    async fn job_info(&self, job: Uuid) -> Result<JobInfo, Error> {
+        self.database().job_info(job).await
+    }
+
     async fn crate_version_info(&self, name: &str, version: &str) -> Result<VersionInfo, Error> {
         self.database().crate_version_info(name, version).await
     }
@@ -718,6 +722,11 @@ impl WriteHandle for Writer {
     async fn tasks_create_all(&self, kind: &str, triple: &str) -> Result<(), BoxError> {
         self.database().tasks_create_all(kind, triple).await?;
         Ok(())
+    }
+
+    async fn job_request(&self, builder: Uuid) -> Result<Uuid, BoxError> {
+        let uuid = self.database().job_request(builder, "generic").await?;
+        Ok(uuid)
     }
 
     async fn commit(self: Box<Self>) -> Result<(), BoxError> {

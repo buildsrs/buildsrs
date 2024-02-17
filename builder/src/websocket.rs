@@ -2,13 +2,16 @@ use anyhow::Result;
 use buildsrs_protocol::*;
 use futures::{SinkExt, StreamExt};
 use ssh_key::{HashAlg, PrivateKey};
+use std::time::Duration;
 use tokio::{
     net::TcpStream,
     select,
     sync::mpsc::{channel, Receiver, Sender},
     task::JoinSet,
+    time::{interval, Interval},
 };
 use tokio_tungstenite::{connect_async, tungstenite::Message, MaybeTlsStream, WebSocketStream};
+use tracing::*;
 use url::Url;
 
 /// [`WebSocketStream`] connection type alias.
@@ -21,6 +24,7 @@ pub enum Event {
 
 /// `WebSocket` connection to receive jobs
 pub struct Connection {
+    poll_timer: Interval,
     /// Private key, used for authentication and artifact signing.
     private_key: PrivateKey,
     /// WebSocket connection.
@@ -46,6 +50,7 @@ impl Connection {
     pub fn new(websocket: WebSocket, private_key: PrivateKey) -> Self {
         let (sender, receiver) = channel(16);
         Self {
+            poll_timer: interval(Duration::from_secs(1)),
             private_key,
             websocket,
             sender,
@@ -96,13 +101,20 @@ impl Connection {
 
     /// Synchronize tasks with server.
     pub async fn tasks_sync(&mut self) -> Result<()> {
-        // TODO: implement tasks sync
+        if self.tasks.len() < 4 {
+            info!("Requesting another task");
+            self.send(ClientMessage::JobRequest(JobRequest {
+                target: "generic".to_string(),
+            }))
+            .await?;
+        }
         Ok(())
     }
 
     /// Handle a single iteration.
     pub async fn handle_iter(&mut self) -> Result<()> {
         select! {
+            _tick = self.poll_timer.tick() => self.tasks_sync().await?,
             message = Self::recv(&mut self.websocket) => self.handle_message(message?),
             _result = self.tasks.join_next() => self.handle_done().await?,
             _event = self.receiver.recv() => {},
@@ -146,5 +158,7 @@ impl Connection {
         }
     }
 
-    async fn job(_job: Job, _sender: Sender<Event>) {}
+    async fn job(_job: Job, _sender: Sender<Event>) {
+        todo!()
+    }
 }
